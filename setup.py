@@ -9,9 +9,7 @@ setup(name='blender_kitti',
       license='MIT',
       packages=['blender_kitti'],
       zip_safe=False,
-      install_requires=[
-          'bpy'
-          ],
+      install_requires=[],
       test_suite='nose.collector',
       tests_require=['nose'],
       python_requires='>=3.5',
