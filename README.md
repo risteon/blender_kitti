@@ -1,5 +1,8 @@
 # blender_kitti
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+
 ## Installation into Blender's bundled python
 
 ```
