@@ -35,7 +35,7 @@ def add_point_cloud(point_cloud: np.ndarray, colors_rgba: np.ndarray = None):
     image = bpy.data.images.new(image_name, len(point_cloud), 1, alpha=True)
     colors_rgba = colors_rgba.reshape((-1))
     image.pixels = [a for a in colors_rgba]
-    
+
     # Create Object whose Object Data is our new mesh
     obj = bpy.data.objects.new('obj_point_cloud', mesh)
 
