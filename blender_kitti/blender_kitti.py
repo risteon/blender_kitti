@@ -5,6 +5,42 @@ import bpy
 import numpy as np
 
 
+def add_voxels(voxels: np.ndarray, colors_rgba: np.ndarray = None):
+    assert voxels.ndim == 3
+
+    dtype = np.float32
+    deltas = np.asarray([.2, .2, .2], dtype=dtype)
+
+    coords = np.mgrid[[slice(x) for x in voxels.shape]].astype(dtype)
+    coords = np.moveaxis(coords, 0, 3)
+    coords *= deltas
+    coords = coords[voxels]
+
+    num_voxels = len(coords)
+
+    # Create mesh
+    mesh = bpy.data.meshes.new(name='voxel_centers')
+    mesh.vertices.add(num_voxels * 3)
+    mesh.vertices.foreach_set("co", np.repeat(coords, 3, axis=0).reshape((-1)))
+    mesh.loops.add(num_voxels * 3)
+    mesh.loops.foreach_set("vertex_index", np.arange(0, 3 * num_voxels))
+
+    loop_start = np.arange(0, 3 * num_voxels, 3, np.int32)
+    loop_total = np.full(fill_value=3, shape=(num_voxels,), dtype=np.int32)
+    num_loops = loop_start.shape[0]
+
+    mesh.polygons.add(num_loops)
+    mesh.polygons.foreach_set("loop_start", loop_start)
+    mesh.polygons.foreach_set("loop_total", loop_total)
+
+    mesh.update()
+    mesh.validate()
+    obj = bpy.data.objects.new('obj_voxels', mesh)
+
+    scene = bpy.context.scene
+    scene.collection.objects.link(obj)
+
+
 def add_point_cloud(point_cloud: np.ndarray, colors_rgba: np.ndarray = None):
     assert point_cloud.shape[1] == 3
     num_points = len(point_cloud)

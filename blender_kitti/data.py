@@ -59,8 +59,10 @@ def get_semantic_kitti_voxels():
 
     semantic_colors = np.asarray([list(color_bgr[k]) for k in learning_map.keys()], np.uint8)
     color_grid = semantic_colors[voxel_label]
-    return data['label'] == 0, color_grid
+    return data['label'] != 0, color_grid
 
 
 if __name__ == '__main__':
     occupied, color = get_semantic_kitti_voxels()
+    from voxels import add_voxels
+    add_voxels(occupied)
