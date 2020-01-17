@@ -5,6 +5,30 @@ import bpy
 import numpy as np
 
 
+def _create_mesh(positions: np.ndarray, name='mesh_points'):
+    assert positions.ndim == 2
+    assert positions.shape[1] == 3
+
+    num_vertices = len(positions)
+    mesh = bpy.data.meshes.new(name=name)
+    mesh.vertices.add(num_vertices * 3)
+    mesh.vertices.foreach_set("co", np.repeat(positions, 3, axis=0).reshape((-1)))
+    mesh.loops.add(num_vertices * 3)
+    mesh.loops.foreach_set("vertex_index", np.arange(0, 3 * num_vertices))
+
+    loop_start = np.arange(0, 3 * num_vertices, 3, np.int32)
+    loop_total = np.full(fill_value=3, shape=(num_vertices,), dtype=np.int32)
+    num_loops = loop_start.shape[0]
+
+    mesh.polygons.add(num_loops)
+    mesh.polygons.foreach_set("loop_start", loop_start)
+    mesh.polygons.foreach_set("loop_total", loop_total)
+
+    mesh.update()
+    mesh.validate()
+    return mesh
+
+
 def add_voxels(voxels: np.ndarray, colors_rgba: np.ndarray = None):
     assert voxels.ndim == 3
 
@@ -16,53 +40,21 @@ def add_voxels(voxels: np.ndarray, colors_rgba: np.ndarray = None):
     coords *= deltas
     coords = coords[voxels]
 
-    num_voxels = len(coords)
-
-    # Create mesh
-    mesh = bpy.data.meshes.new(name='voxel_centers')
-    mesh.vertices.add(num_voxels * 3)
-    mesh.vertices.foreach_set("co", np.repeat(coords, 3, axis=0).reshape((-1)))
-    mesh.loops.add(num_voxels * 3)
-    mesh.loops.foreach_set("vertex_index", np.arange(0, 3 * num_voxels))
-
-    loop_start = np.arange(0, 3 * num_voxels, 3, np.int32)
-    loop_total = np.full(fill_value=3, shape=(num_voxels,), dtype=np.int32)
-    num_loops = loop_start.shape[0]
-
-    mesh.polygons.add(num_loops)
-    mesh.polygons.foreach_set("loop_start", loop_start)
-    mesh.polygons.foreach_set("loop_total", loop_total)
-
-    mesh.update()
-    mesh.validate()
+    mesh = _create_mesh(coords, 'voxel_centers')
     obj = bpy.data.objects.new('obj_voxels', mesh)
-
     scene = bpy.context.scene
     scene.collection.objects.link(obj)
 
 
 def add_point_cloud(point_cloud: np.ndarray, colors_rgba: np.ndarray = None):
     assert point_cloud.shape[1] == 3
-    num_points = len(point_cloud)
 
-    # Create mesh object based on the arrays above
-    mesh = bpy.data.meshes.new(name='point_cloud')
+    mesh = _create_mesh(point_cloud, 'mesh_point_cloud')
+    obj = bpy.data.objects.new('obj_point_cloud', mesh)
 
-    mesh.vertices.add(len(point_cloud) * 3)
-    mesh.vertices.foreach_set("co", np.repeat(point_cloud, 3, axis=0).reshape((-1)))
-    mesh.loops.add(num_points * 3)
-    mesh.loops.foreach_set("vertex_index", np.arange(0, 3 * num_points))
-
-    loop_start = np.arange(0, 3 * num_points, 3, np.int32)
-    loop_total = np.full(fill_value=3, shape=(num_points,), dtype=np.int32)
-    num_loops = loop_start.shape[0]
-
-    mesh.polygons.add(num_loops)
-    mesh.polygons.foreach_set("loop_start", loop_start)
-    mesh.polygons.foreach_set("loop_total", loop_total)
-
-    mesh.update()
-    mesh.validate()
+    # Add *Object* to the scene, not the mesh
+    scene = bpy.context.scene
+    scene.collection.objects.link(obj)
 
     image_name = 'point_cloud_colors'
     if image_name in bpy.data.images:
@@ -71,13 +63,6 @@ def add_point_cloud(point_cloud: np.ndarray, colors_rgba: np.ndarray = None):
     image = bpy.data.images.new(image_name, len(point_cloud), 1, alpha=True)
     colors_rgba = colors_rgba.reshape((-1))
     image.pixels = [a for a in colors_rgba]
-
-    # Create Object whose Object Data is our new mesh
-    obj = bpy.data.objects.new('obj_point_cloud', mesh)
-
-    # Add *Object* to the scene, not the mesh
-    scene = bpy.context.scene
-    scene.collection.objects.link(obj)
 
     # ##########
     bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=3, radius=0.02, enter_editmode=False,
