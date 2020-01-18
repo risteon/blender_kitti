@@ -34,8 +34,7 @@ def read_semantic_kitti_voxel_label(semantic_kitti_sample) -> {str: np.ndarray}:
     return data
 
 
-def get_semantic_kitti_voxels():
-
+def get_semantic_kitti_config():
     file_config_semantic = pathlib.Path(__file__).parent.parent / 'config' / 'semantic-kitti.yaml'
     if not file_config_semantic.is_file():
         raise FileNotFoundError("Cannot find semantic kitti config file.")
@@ -45,10 +44,14 @@ def get_semantic_kitti_voxels():
         yaml = YAML()
         data = yaml.load(file_conf_sem)
         config_data = {k: dict(v) for k, v in data.items()}
+    return config_data
+
+
+def get_semantic_kitti_voxels():
+    config_data = get_semantic_kitti_config()
 
     color_bgr = dict(config_data['color_map'])
     learning_map = dict(config_data['learning_map'])
-    learning_map_inv = dict(config_data['learning_map_inv'])
 
     mapping = {k: v for k, v in zip(learning_map.keys(), range(len(learning_map)))}
 
@@ -62,7 +65,39 @@ def get_semantic_kitti_voxels():
     return data['label'] != 0, color_grid
 
 
+def get_semantic_kitti_point_cloud():
+
+    file_point_cloud = pathlib.Path(__file__).parent.parent / 'data' /\
+        'velodyne_kitti_odometry_08_001000.bin'
+    if not file_point_cloud.is_file():
+        raise FileNotFoundError("Cannot find kitti point cloud file.")
+
+    file_semantic_label = pathlib.Path(__file__).parent.parent / 'data' / \
+                       'semantic_label_kitti_odometry_08_001000.label'
+    if not file_semantic_label.is_file():
+        raise FileNotFoundError("Cannot find semantic kitti label file.")
+
+    config_data = get_semantic_kitti_config()
+    point_cloud = np.fromfile(str(file_point_cloud), dtype=np.float32).reshape((-1, 4,))
+    label = np.fromfile(str(file_semantic_label), dtype=np.uint32).reshape((-1,))
+    label_sem = label & 0xFFFF  # semantic label in lower half
+    label_inst = label >> 16  # instance id in upper half
+    # sanity check
+    assert ((label_sem + (label_inst << 16) == label).all())
+
+    color_bgr = dict(config_data['color_map'])
+    learning_map = dict(config_data['learning_map'])
+    mapping = {k: v for k, v in zip(learning_map.keys(), range(len(learning_map)))}
+    semantic_colors = np.asarray([list(color_bgr[k]) for k in learning_map.keys()], np.uint8)
+    label = np.vectorize(mapping.get, otypes=[np.int16])(label_sem)
+    colors = semantic_colors[label]
+    return point_cloud[:, :3], colors
+
+
 if __name__ == '__main__':
-    occupied, color = get_semantic_kitti_voxels()
-    from voxels import add_voxels
-    add_voxels(occupied)
+    point_cloud, color = get_semantic_kitti_point_cloud()
+    # occupied, color = get_semantic_kitti_voxels()
+    # from blender_kitti import add_voxels
+    # add_voxels(occupied)
+    from blender_kitti import add_point_cloud
+    add_point_cloud(point_cloud, color)

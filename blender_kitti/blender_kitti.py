@@ -88,7 +88,7 @@ def add_point_cloud(point_cloud: np.ndarray, colors_rgba: np.ndarray = None):
                                       [uv for pair in [vert_uvs[l.vertex_index] for l in me.loops]
                                        for uv in pair])
 
-    uv = np.asarray([uv for pair in [vert_uvs[l.vertex_index] for l in me.loops] for uv in pair])
+    # uv = np.asarray([uv for pair in [vert_uvs[l.vertex_index] for l in me.loops] for uv in pair])
 
     # ### MATERIAL
     # Vertex color material
