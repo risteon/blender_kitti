@@ -73,7 +73,7 @@ def get_semantic_kitti_point_cloud():
         raise FileNotFoundError("Cannot find kitti point cloud file.")
 
     file_semantic_label = pathlib.Path(__file__).parent.parent / 'data' / \
-                       'semantic_label_kitti_odometry_08_001000.label'
+        'semantic_label_kitti_odometry_08_001000.label'
     if not file_semantic_label.is_file():
         raise FileNotFoundError("Cannot find semantic kitti label file.")
 
@@ -92,12 +92,3 @@ def get_semantic_kitti_point_cloud():
     label = np.vectorize(mapping.get, otypes=[np.int16])(label_sem)
     colors = semantic_colors[label]
     return point_cloud[:, :3], colors
-
-
-if __name__ == '__main__':
-    point_cloud, color = get_semantic_kitti_point_cloud()
-    # occupied, color = get_semantic_kitti_voxels()
-    # from blender_kitti import add_voxels
-    # add_voxels(occupied)
-    from blender_kitti import add_point_cloud
-    add_point_cloud(point_cloud, color)
