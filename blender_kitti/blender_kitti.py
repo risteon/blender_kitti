@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 """"""
 
-import bpy
+try:
+    import bpy
+except ImportError:
+    bpy = None
+    print("bpy module not available.")
 import numpy as np
 
 
@@ -47,7 +51,25 @@ def add_voxels(voxels: np.ndarray, colors_rgba: np.ndarray = None):
 
 
 def add_point_cloud(point_cloud: np.ndarray, colors_rgba: np.ndarray = None):
-    assert point_cloud.shape[1] == 3
+    assert point_cloud.ndim == 2 and point_cloud.shape[1] == 3
+    assert colors_rgba.ndim == 2
+
+    if colors_rgba.dtype == np.float32:
+        pass
+    elif colors_rgba.dtype == np.uint8:
+        colors_rgba = colors_rgba.astype(np.float32) / 255.0
+    else:
+        raise NotImplementedError("Cannot handle colors_rgba with dtype {}."
+                                  .format(str(colors_rgba.dtype)))
+
+    if colors_rgba.shape[1] == 3:
+        colors_rgba = np.concatenate((colors_rgba, np.ones_like(colors_rgba[:, :1])), axis=-1)
+    elif colors_rgba.shape[1] == 4:
+        pass
+    else:
+        raise NotImplementedError("Cannot handle colors_rgba with shape {}."
+                                  .format(colors_rgba.shape))
+    assert colors_rgba.shape[1] == 4
 
     mesh = _create_mesh(point_cloud, 'mesh_point_cloud')
     obj = bpy.data.objects.new('obj_point_cloud', mesh)
