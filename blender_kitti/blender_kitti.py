@@ -10,11 +10,15 @@ import numpy as np
 
 
 def _create_mesh(positions: np.ndarray, name='mesh_points'):
+    """Create mesh with where each point is a pseudo face (three vertices at the same position. """
     assert positions.ndim == 2
     assert positions.shape[1] == 3
 
-    num_vertices = len(positions)
+    if name in bpy.data.meshes:
+        raise RuntimeError("Mesh '{}' already exists.".format(name))
     mesh = bpy.data.meshes.new(name=name)
+
+    num_vertices = len(positions)
     mesh.vertices.add(num_vertices * 3)
     mesh.vertices.foreach_set("co", np.repeat(positions, 3, axis=0).reshape((-1)))
     mesh.loops.add(num_vertices * 3)
@@ -33,88 +37,33 @@ def _create_mesh(positions: np.ndarray, name='mesh_points'):
     return mesh
 
 
-def add_voxels(voxels: np.ndarray, colors_rgba: np.ndarray = None):
-    assert voxels.ndim == 3
+def _create_instancer_obj(positions: np.ndarray, name_instancer_obj: str, name_mesh: str):
+    assert positions.ndim == 2 and positions.shape[1] == 3
 
-    dtype = np.float32
-    deltas = np.asarray([.2, .2, .2], dtype=dtype)
+    if name_instancer_obj in bpy.data.objects:
+        raise RuntimeError("Object '{}' already exists.".format(name_instancer_obj))
 
-    coords = np.mgrid[[slice(x) for x in voxels.shape]].astype(dtype)
-    coords = np.moveaxis(coords, 0, 3)
-    coords *= deltas
-    coords = coords[voxels]
+    mesh = _create_mesh(positions, name_mesh)
 
-    mesh = _create_mesh(coords, 'voxel_centers')
-    obj = bpy.data.objects.new('obj_voxels', mesh)
-    scene = bpy.context.scene
-    scene.collection.objects.link(obj)
-
-
-def add_point_cloud(point_cloud: np.ndarray, colors_rgba: np.ndarray = None):
-    assert point_cloud.ndim == 2 and point_cloud.shape[1] == 3
-    assert colors_rgba.ndim == 2
-
-    if colors_rgba.dtype == np.float32:
-        pass
-    elif colors_rgba.dtype == np.uint8:
-        colors_rgba = colors_rgba.astype(np.float32) / 255.0
-    else:
-        raise NotImplementedError("Cannot handle colors_rgba with dtype {}."
-                                  .format(str(colors_rgba.dtype)))
-
-    if colors_rgba.shape[1] == 3:
-        colors_rgba = np.concatenate((colors_rgba, np.ones_like(colors_rgba[:, :1])), axis=-1)
-    elif colors_rgba.shape[1] == 4:
-        pass
-    else:
-        raise NotImplementedError("Cannot handle colors_rgba with shape {}."
-                                  .format(colors_rgba.shape))
-    assert colors_rgba.shape[1] == 4
-
-    mesh = _create_mesh(point_cloud, 'mesh_point_cloud')
-    obj = bpy.data.objects.new('obj_point_cloud', mesh)
-
-    # Add *Object* to the scene, not the mesh
-    scene = bpy.context.scene
-    scene.collection.objects.link(obj)
-
-    image_name = 'point_cloud_colors'
-    if image_name in bpy.data.images:
-        bpy.data.images.remove(bpy.data.images[image_name])
-
-    image = bpy.data.images.new(image_name, len(point_cloud), 1, alpha=True)
-    colors_rgba = colors_rgba.reshape((-1))
-    image.pixels = [a for a in colors_rgba]
-
-    # ##########
-    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=3, radius=0.02, enter_editmode=False,
-                                          location=(0, 0, 0))
-    inst_obj = bpy.context.selected_objects[0]
-
-    inst_obj.parent = obj
-    # obj.instance_type = 'VERTS'
-    obj.instance_type = 'FACES'
-    obj.show_instancer_for_render = False
-
-    # UV coords
-    me = obj.data
-    # Sample data
-    # vert_uvs = [(0, i // 3) for i in range(len(me.vertices))]
-    vert_uvs = np.repeat(np.arange(0, len(me.vertices)), 3, axis=0)
+    vert_uvs = np.repeat(np.arange(0, len(mesh.vertices)), 3, axis=0)
     # add y coordinate
     vert_uvs = np.stack((vert_uvs, np.zeros_like(vert_uvs)), axis=-1)
-    # print(me.polygons)
-    me.uv_layers.new(name='per_vertex_dummy_uv')
-    # me.uv_textures.new("test")
-    me.uv_layers[-1].data.foreach_set("uv",
-                                      [uv for pair in [vert_uvs[l.vertex_index] for l in me.loops]
+    mesh.uv_layers.new(name='per_vertex_dummy_uv')
+    mesh.uv_layers[-1].data.foreach_set("uv",
+                                      [uv for pair in [vert_uvs[l.vertex_index] for l in mesh.loops]
                                        for uv in pair])
 
-    # uv = np.asarray([uv for pair in [vert_uvs[l.vertex_index] for l in me.loops] for uv in pair])
+    obj_instancer = bpy.data.objects.new(name_instancer_obj, mesh)
+    return obj_instancer
 
-    # ### MATERIAL
-    # Vertex color material
-    mat = bpy.data.materials.new(name="PointColorMaterial")
+
+def _create_uv_mapped_material(color_image, name_material: str = 'material_point_cloud'):
+    assert color_image.size[1] == 1
+
+    if name_material in bpy.data.materials:
+        raise RuntimeError("Material '{}' already exists")
+
+    mat = bpy.data.materials.new(name=name_material)
     mat.use_nodes = True
     nodes = mat.node_tree.nodes
     nodes.clear()
@@ -135,7 +84,7 @@ def add_point_cloud(point_cloud: np.ndarray, colors_rgba: np.ndarray = None):
     node_add_y.operation = 'ADD'
     node_add_y.location = 450, -200
     node_div_x = nodes.new(type='ShaderNodeMath')
-    node_div_x.inputs[1].default_value = float(len(point_cloud))
+    node_div_x.inputs[1].default_value = float(color_image.size[0])
     node_div_x.operation = 'DIVIDE'
     node_div_x.location = 520, 0
     node_comb = nodes.new(type='ShaderNodeCombineXYZ')
@@ -145,7 +94,7 @@ def add_point_cloud(point_cloud: np.ndarray, colors_rgba: np.ndarray = None):
     node_text = nodes.new(type='ShaderNodeTexImage')
     node_text.interpolation = 'Closest'
     node_text.extension = 'CLIP'
-    node_text.image = image
+    node_text.image = color_image
     node_text.location = 900, 0
 
     # mix point colors with simple black material
@@ -180,8 +129,88 @@ def add_point_cloud(point_cloud: np.ndarray, colors_rgba: np.ndarray = None):
     # function to set color mix factor
     def set_color_factor(f: float):
         node_mix_rgb.inputs[0].default_value = f
+    return mat
 
-    # add material to object
-    inst_obj.data.materials.append(mat)
 
-    return obj, set_color_factor
+def _create_color_image(colors_rgba: np.ndarray, name: str):
+    assert colors_rgba.ndim == 2
+    # dtype and alpha channel checks
+    if colors_rgba.dtype == np.float32:
+        pass
+    elif colors_rgba.dtype == np.uint8:
+        colors_rgba = colors_rgba.astype(np.float32) / 255.0
+    else:
+        raise NotImplementedError("Cannot handle colors_rgba with dtype {}."
+                                  .format(str(colors_rgba.dtype)))
+    if colors_rgba.shape[1] == 3:
+        colors_rgba = np.concatenate((colors_rgba, np.ones_like(colors_rgba[:, :1])), axis=-1)
+    elif colors_rgba.shape[1] == 4:
+        pass
+    else:
+        raise NotImplementedError("Cannot handle colors_rgba with shape {}."
+                                  .format(colors_rgba.shape))
+    assert colors_rgba.shape[1] == 4
+
+    if name in bpy.data.images:
+        raise RuntimeError("Image '{}' already exists.".format(name))
+    image = bpy.data.images.new(name, len(colors_rgba), 1, alpha=True)
+
+    colors_rgba = colors_rgba.reshape((-1))
+    image.pixels = [a for a in colors_rgba]
+    return image
+
+
+def _create_entites(name_prefix: str, positions: np.ndarray, colors: np.ndarray):
+    # created entities
+    name_mesh = 'mesh_{}'.format(name_prefix)
+    name_obj = 'obj_instancer_{}'.format(name_prefix)
+    name_image = 'colors_{}'.format(name_prefix)
+    name_material = 'material_{}'.format(name_prefix)
+
+    obj_instancer = _create_instancer_obj(positions, name_obj, name_mesh)
+    image = _create_color_image(colors, name_image)
+    # the particle obj will use this material
+    material = _create_uv_mapped_material(image, name_material)
+
+    # Todo replace with non-ops calls to create object
+    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=3, radius=0.02, enter_editmode=False,
+                                          location=(0, 0, 0))
+    obj_particle = bpy.context.selected_objects[0]
+    obj_particle.parent = obj_instancer
+    # instancing from 'fake' faces is necessary for uv mapping to work.
+    obj_instancer.instance_type = 'FACES'
+    obj_instancer.show_instancer_for_render = False
+
+    obj_particle.data.materials.append(material)
+    return obj_instancer
+
+
+def add_voxels(voxels: np.ndarray, colors_rgba: np.ndarray = None,
+               name_prefix: str = 'voxels', scene=None):
+    assert voxels.ndim == 3
+    assert voxels.dtype == np.bool
+
+    dtype = np.float32
+    deltas = np.asarray([.2, .2, .2], dtype=dtype)
+
+    coords = np.mgrid[[slice(x) for x in voxels.shape]].astype(dtype)
+    coords = np.moveaxis(coords, 0, 3)
+    coords *= deltas
+    coords = coords[voxels]
+    colors_rgba = colors_rgba[voxels]
+
+    obj_instancer = _create_entites(name_prefix, coords, colors_rgba)
+    if scene is None:
+        scene = bpy.context.scene
+    scene.collection.objects.link(obj_instancer)
+    return obj_instancer
+
+
+def add_point_cloud(point_cloud: np.ndarray, colors_rgba: np.ndarray = None,
+                    name_prefix: str = 'point_cloud', scene=None):
+    # created entities
+    obj_instancer = _create_entites(name_prefix, point_cloud, colors_rgba)
+    if scene is None:
+        scene = bpy.context.scene
+    scene.collection.objects.link(obj_instancer)
+    return obj_instancer
