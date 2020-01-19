@@ -160,7 +160,8 @@ def _create_color_image(colors_rgba: np.ndarray, name: str):
     return image
 
 
-def _create_entites(name_prefix: str, positions: np.ndarray, colors: np.ndarray):
+def _create_entites(name_prefix: str, positions: np.ndarray, colors: np.ndarray,
+                    obj_particle):
     # created entities
     name_mesh = 'mesh_{}'.format(name_prefix)
     name_obj = 'obj_instancer_{}'.format(name_prefix)
@@ -172,10 +173,6 @@ def _create_entites(name_prefix: str, positions: np.ndarray, colors: np.ndarray)
     # the particle obj will use this material
     material = _create_uv_mapped_material(image, name_material)
 
-    # Todo replace with non-ops calls to create object
-    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=3, radius=0.02, enter_editmode=False,
-                                          location=(0, 0, 0))
-    obj_particle = bpy.context.selected_objects[0]
     obj_particle.parent = obj_instancer
     # instancing from 'fake' faces is necessary for uv mapping to work.
     obj_instancer.instance_type = 'FACES'
@@ -199,7 +196,11 @@ def add_voxels(voxels: np.ndarray, colors_rgba: np.ndarray = None,
     coords = coords[voxels]
     colors_rgba = colors_rgba[voxels]
 
-    obj_instancer = _create_entites(name_prefix, coords, colors_rgba)
+    # Todo replace with non-ops calls to create object
+    bpy.ops.mesh.primitive_cube_add(size=0.16, enter_editmode=False, location=(0, 0, 0))
+    obj_particle = bpy.context.selected_objects[0]
+
+    obj_instancer = _create_entites(name_prefix, coords, colors_rgba, obj_particle)
     if scene is None:
         scene = bpy.context.scene
     scene.collection.objects.link(obj_instancer)
@@ -209,7 +210,13 @@ def add_voxels(voxels: np.ndarray, colors_rgba: np.ndarray = None,
 def add_point_cloud(point_cloud: np.ndarray, colors_rgba: np.ndarray = None,
                     name_prefix: str = 'point_cloud', scene=None):
     # created entities
-    obj_instancer = _create_entites(name_prefix, point_cloud, colors_rgba)
+
+    # Todo replace with non-ops calls to create object
+    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=3, radius=0.02, enter_editmode=False,
+                                          location=(0, 0, 0))
+    obj_particle = bpy.context.selected_objects[0]
+
+    obj_instancer = _create_entites(name_prefix, point_cloud, colors_rgba, obj_particle)
     if scene is None:
         scene = bpy.context.scene
     scene.collection.objects.link(obj_instancer)
