@@ -7,7 +7,7 @@ setup(name='blender_kitti',
       author='Christoph Rist',
       author_email='c.rist@posteo.de',
       license='MIT',
-      packages=['blender_kitti', 'blender_kitti_example'],
+      packages=['blender_kitti', 'blender_kitti_examples'],
       zip_safe=False,
       install_requires=[
           'ruamel.yaml',

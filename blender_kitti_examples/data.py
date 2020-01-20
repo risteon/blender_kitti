@@ -35,7 +35,8 @@ def read_semantic_kitti_voxel_label(semantic_kitti_sample) -> {str: np.ndarray}:
 
 
 def get_semantic_kitti_config():
-    file_config_semantic = pathlib.Path(__file__).parent.parent / 'config' / 'semantic-kitti.yaml'
+    file_config_semantic = pathlib.Path(__file__).parent.parent / 'data' / 'config' / \
+                           'semantic-kitti.yaml'
     if not file_config_semantic.is_file():
         raise FileNotFoundError("Cannot find semantic kitti config file.")
 
@@ -61,6 +62,8 @@ def get_semantic_kitti_voxels():
     voxel_label = np.vectorize(mapping.get, otypes=[np.int16])(data['label'])
 
     semantic_colors = np.asarray([list(color_bgr[k]) for k in learning_map.keys()], np.uint8)
+    # BGR -> RGB
+    semantic_colors = semantic_colors[..., ::-1]
     color_grid = semantic_colors[voxel_label]
     return data['label'] != 0, color_grid
 
@@ -89,6 +92,9 @@ def get_semantic_kitti_point_cloud():
     learning_map = dict(config_data['learning_map'])
     mapping = {k: v for k, v in zip(learning_map.keys(), range(len(learning_map)))}
     semantic_colors = np.asarray([list(color_bgr[k]) for k in learning_map.keys()], np.uint8)
+    # BGR -> RGB
+    semantic_colors = semantic_colors[..., ::-1]
+    
     label = np.vectorize(mapping.get, otypes=[np.int16])(label_sem)
     colors = semantic_colors[label]
     return point_cloud[:, :3], colors
