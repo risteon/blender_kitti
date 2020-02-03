@@ -9,7 +9,7 @@ except ImportError:
 
 
 def clear_all():
-    bpy.ops.object.select_all(action='SELECT')
+    bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
 
     master_collection = bpy.context.scene.collection
@@ -36,12 +36,12 @@ def add_light_source():
     nodes.clear()
 
     # create emission node
-    node_emission = nodes.new(type='ShaderNodeEmission')
+    node_emission = nodes.new(type="ShaderNodeEmission")
     node_emission.inputs[0].default_value = (1.0, 1.0, 1.0, 1.0)  # RGBA
     node_emission.inputs[1].default_value = 5.0  # strength
     node_emission.location = 0, 0
     # create output node
-    node_output = nodes.new(type='ShaderNodeOutputMaterial')
+    node_output = nodes.new(type="ShaderNodeOutputMaterial")
     node_output.location = 200, 0
     # link nodes
     links = mat.node_tree.links
@@ -60,9 +60,9 @@ def add_cameras():
     cam = bpy.data.cameras.new("CameraMain")
     cam_main = bpy.data.objects.new("ObjCameraMain", cam)
     cam_main.location = (-33.3056, 24.1123, 26.0909)
-    cam_main.rotation_mode = 'QUATERNION'
+    cam_main.rotation_mode = "QUATERNION"
     cam_main.rotation_quaternion = (0.42119, 0.21272, -0.39741, -0.78703)
-    cam_main.data.type = 'PERSP'
+    cam_main.data.type = "PERSP"
     bpy.context.scene.collection.objects.link(cam_main)
 
     # make this the main scene camera
@@ -72,9 +72,9 @@ def add_cameras():
     cam = bpy.data.cameras.new("CameraTopView")
     cam_top = bpy.data.objects.new("ObjCameraTopView", cam)
     cam_top.location = (0.0, 0.0, 45.0)
-    cam_top.rotation_mode = 'QUATERNION'
+    cam_top.rotation_mode = "QUATERNION"
     cam_top.rotation_quaternion = (1.0, 0.0, 0.0, 0.0)
-    cam_top.data.type = 'ORTHO'
+    cam_top.data.type = "ORTHO"
     cam_top.data.ortho_scale = 50.0
     bpy.context.scene.collection.objects.link(cam_top)
 
@@ -83,8 +83,8 @@ def add_cameras():
 
 def enable_cycles_render_devices():
     # setup render devices. Use all.
-    cycles_prefs = bpy.context.preferences.addons['cycles'].preferences
-    cycles_prefs.compute_device_type = 'CUDA'
+    cycles_prefs = bpy.context.preferences.addons["cycles"].preferences
+    cycles_prefs.compute_device_type = "CUDA"
     cycles_prefs.get_devices()
     try:
         # blender2.81+
@@ -96,10 +96,10 @@ def enable_cycles_render_devices():
         device.use = True
 
 
-def setup_scene():
+def setup_scene(name: str = "blender_kitti"):
     scene = bpy.context.scene
-    scene.render.engine = 'CYCLES'
-    scene.name = 'blender_kitti'
+    scene.render.engine = "CYCLES"
+    scene.name = name
 
     clear_all()
     add_light_source()
