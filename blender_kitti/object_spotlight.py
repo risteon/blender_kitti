@@ -47,7 +47,7 @@ def _create_ground_material(name: str = "ground_material"):
     color_ramp.elements[1].position = 0.69
     color_ramp.elements[1].alpha = 1.0
     color_ramp.elements[1].color = 1.0, 1.0, 1.0, 1.0
-    links.new(node_math.outputs[0], color_ramp.inputs[0])
+    links.new(node_math.outputs[0], node_color_ramp.inputs[0])
 
     node_bsdf = nodes.new(type="ShaderNodeBsdfPrincipled")
     node_bsdf.inputs[7].default_value = 0.92  # roughness
@@ -66,7 +66,7 @@ def _create_ground_material(name: str = "ground_material"):
 
     node_output = nodes.new(type="ShaderNodeOutputMaterial")
     node_output.location = 1800, 0
-    links.new(node_color_ramp.outputs[1], node_mix.inputs[0])
+    links.new(node_mix.outputs[0], node_output.inputs[0])
 
     return mat
 
