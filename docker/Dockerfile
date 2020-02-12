@@ -61,6 +61,9 @@ RUN set -ex && \
 
 RUN mkdir ~/blender-git && cd ~/blender-git && git clone --branch v2.81a http://git.blender.org/blender.git && cd ~/blender-git/blender && git submodule init && git submodule update
 
+# Fix pugixml dependency
+RUN cd ~/blender-git/blender/build_files/build_environment && sed '100iinclude(cmake/pugixml.cmake)' CMakeLists.txt > CMakeLists.txt.tmp && mv CMakeLists.txt.tmp CMakeLists.txt
+
 RUN cd ~/blender-git/blender && make deps
 
 RUN mkdir ~/blender-git/build && cd ~/blender-git/build
