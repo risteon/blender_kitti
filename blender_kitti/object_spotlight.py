@@ -13,7 +13,7 @@ except ImportError:
 
 def _create_ground_material(name: str = "ground_material"):
     if name in bpy.data.materials:
-        raise RuntimeError("Material '{}' already exists")
+        raise RuntimeError("Material '{}' already exists".format(name))
 
     mat = bpy.data.materials.new(name=name)
     mat.use_nodes = True
@@ -26,14 +26,14 @@ def _create_ground_material(name: str = "ground_material"):
     node_vector_math = nodes.new(type="ShaderNodeVectorMath")
     node_vector_math.location = 200, 0
     node_vector_math.operation = "DISTANCE"
-    node_vector_math.inputs[1].default_value = (0.0, 0.0, 1.0)
-    links.new(node_tex_coord.outputs[3], node_vector_math.inputs[0])
+    node_vector_math.inputs[1].default_value = (0.5, 0.5, 1.0)
+    links.new(node_tex_coord.outputs[0], node_vector_math.inputs[0])
 
     node_math = nodes.new(type="ShaderNodeMath")
+    links.new(node_vector_math.outputs[0], node_math.inputs[0])
     node_math.location = 400, 0
     node_math.operation = "MULTIPLY"
-    node_math.inputs[1].default_value = 0.9
-    links.new(node_vector_math.outputs[0], node_math.inputs[0])
+    node_math.inputs[1].default_value = 1.5
 
     node_color_ramp = nodes.new(type="ShaderNodeValToRGB")
     node_color_ramp.location = 600, 0
@@ -53,10 +53,10 @@ def _create_ground_material(name: str = "ground_material"):
     node_bsdf.inputs[7].default_value = 0.92  # roughness
     node_bsdf.inputs[12].default_value = 0.0  # clearcoat
     node_bsdf.inputs[13].default_value = 0.25  # clearcoat roughness
-    node_bsdf.location = 1200, 100
+    node_bsdf.location = 900, -100
 
     node_transparent = nodes.new(type="ShaderNodeBsdfTransparent")
-    node_transparent.location = 1200, 250
+    node_transparent.location = 1200, -200
 
     node_mix = nodes.new(type="ShaderNodeMixShader")
     node_mix.location = 1500, 0
