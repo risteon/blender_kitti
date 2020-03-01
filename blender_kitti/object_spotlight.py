@@ -19,7 +19,6 @@ def _create_ground_material(name: str = "ground_material"):
     mat.use_nodes = True
     nodes = mat.node_tree.nodes
     nodes.clear()
-    links = mat.node_tree.links
 
     node_tex_coord = nodes.new(type="ShaderNodeTexCoord")
     node_tex_coord.location = 0, 0
@@ -27,13 +26,11 @@ def _create_ground_material(name: str = "ground_material"):
     node_vector_math.location = 200, 0
     node_vector_math.operation = "DISTANCE"
     node_vector_math.inputs[1].default_value = (0.5, 0.5, 1.0)
-    links.new(node_tex_coord.outputs[0], node_vector_math.inputs[0])
 
-    node_math = nodes.new(type="ShaderNodeMath")
-    links.new(node_vector_math.outputs[0], node_math.inputs[0])
-    node_math.location = 400, 0
-    node_math.operation = "MULTIPLY"
-    node_math.inputs[1].default_value = 1.5
+    node_scale_distance = nodes.new(type="ShaderNodeMath")
+    node_scale_distance.inputs[1].default_value = 1.5
+    node_scale_distance.operation = "MULTIPLY"
+    node_scale_distance.location = 400, 0
 
     node_color_ramp = nodes.new(type="ShaderNodeValToRGB")
     node_color_ramp.location = 600, 0
@@ -47,7 +44,6 @@ def _create_ground_material(name: str = "ground_material"):
     color_ramp.elements[1].position = 0.69
     color_ramp.elements[1].alpha = 1.0
     color_ramp.elements[1].color = 1.0, 1.0, 1.0, 1.0
-    links.new(node_math.outputs[0], node_color_ramp.inputs[0])
 
     node_bsdf = nodes.new(type="ShaderNodeBsdfPrincipled")
     node_bsdf.inputs[7].default_value = 0.92  # roughness
@@ -60,12 +56,17 @@ def _create_ground_material(name: str = "ground_material"):
 
     node_mix = nodes.new(type="ShaderNodeMixShader")
     node_mix.location = 1500, 0
-    links.new(node_color_ramp.outputs[1], node_mix.inputs[0])
-    links.new(node_bsdf.outputs[0], node_mix.inputs[1])
-    links.new(node_transparent.outputs[0], node_mix.inputs[2])
 
     node_output = nodes.new(type="ShaderNodeOutputMaterial")
     node_output.location = 1800, 0
+
+    links = mat.node_tree.links
+    links.new(node_tex_coord.outputs[0], node_vector_math.inputs[0])
+    links.new(node_vector_math.outputs[0], node_scale_distance.inputs[0])
+    links.new(node_scale_distance.outputs[0], node_color_ramp.inputs[0])
+    links.new(node_color_ramp.outputs[1], node_mix.inputs[0])
+    links.new(node_bsdf.outputs[0], node_mix.inputs[1])
+    links.new(node_transparent.outputs[0], node_mix.inputs[2])
     links.new(node_mix.outputs[0], node_output.inputs[0])
 
     return mat

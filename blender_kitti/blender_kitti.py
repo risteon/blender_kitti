@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """"""
+import typing
 
 try:
     import bpy
@@ -58,6 +59,31 @@ def _create_instancer_obj(
 
     obj_instancer = bpy.data.objects.new(name_instancer_obj, mesh)
     return obj_instancer
+
+
+def _create_simple_material(base_color, name_material: str):
+    if name_material in bpy.data.materials:
+        raise RuntimeError("Material '{}' already exists")
+    mat = bpy.data.materials.new(name=name_material)
+    mat.use_nodes = True
+    nodes = mat.node_tree.nodes
+    nodes.clear()
+
+    node_bsdf = nodes.new(type="ShaderNodeBsdfPrincipled")
+    node_bsdf.inputs[0].default_value = base_color
+    node_bsdf.inputs[7].default_value = 0.65  # roughness
+    node_bsdf.inputs[12].default_value = 0.0  # clearcoat
+    node_bsdf.inputs[13].default_value = 0.25  # clearcoat roughness
+    node_bsdf.location = 0, 0
+
+    node_output = nodes.new(type="ShaderNodeOutputMaterial")
+    node_output.location = 400, 0
+
+    # link nodes
+    links = mat.node_tree.links
+    links.new(node_bsdf.outputs[0], node_output.inputs[0])
+
+    return mat
 
 
 def _create_uv_mapped_material(
@@ -171,7 +197,10 @@ def _create_color_image(colors_rgba: np.ndarray, name: str):
 
 
 def _create_entites(
-    name_prefix: str, positions: np.ndarray, colors: np.ndarray, obj_particle
+    name_prefix: str,
+    positions: np.ndarray,
+    colors: typing.Union[None, np.ndarray],
+    obj_particle,
 ):
     # created entities
     name_mesh = "mesh_{}".format(name_prefix)
@@ -180,9 +209,15 @@ def _create_entites(
     name_material = "material_{}".format(name_prefix)
 
     obj_instancer = _create_instancer_obj(positions, name_obj, name_mesh)
-    image = _create_color_image(colors, name_image)
-    # the particle obj will use this material
-    material = _create_uv_mapped_material(image, name_material)
+
+    if colors is not None:
+        image = _create_color_image(colors, name_image)
+        # the particle obj will use this material
+        material = _create_uv_mapped_material(image, name_material)
+    else:
+        material = _create_simple_material(
+            base_color=(0.1, 0.1, 0.1, 1.0), name_material=name_material
+        )
 
     obj_particle.parent = obj_instancer
     # instancing from 'fake' faces is necessary for uv mapping to work.
@@ -195,7 +230,7 @@ def _create_entites(
 
 def add_voxels(
     voxels: np.ndarray,
-    colors_rgba: np.ndarray = None,
+    colors: np.ndarray = None,
     name_prefix: str = "voxels",
     scene=None,
 ):
@@ -209,21 +244,21 @@ def add_voxels(
     coords = np.moveaxis(coords, 0, 3)
     coords *= deltas
     coords = coords[voxels]
-    colors_rgba = colors_rgba[voxels]
+    colors = colors[voxels]
 
     # Todo replace with non-ops calls to create object
     bpy.ops.mesh.primitive_cube_add(size=0.16, enter_editmode=False, location=(0, 0, 0))
     obj_particle = bpy.context.selected_objects[0]
 
-    obj_instancer = _create_entites(name_prefix, coords, colors_rgba, obj_particle)
+    obj_instancer = _create_entites(name_prefix, coords, colors, obj_particle)
     if scene is not None:
         scene.collection.objects.link(obj_instancer)
     return obj_instancer
 
 
 def add_point_cloud(
-    point_cloud: np.ndarray,
-    colors_rgba: np.ndarray = None,
+    points: np.ndarray,
+    colors: np.ndarray = None,
     name_prefix: str = "point_cloud",
     scene=None,
 ):
@@ -235,8 +270,18 @@ def add_point_cloud(
     )
     obj_particle = bpy.context.selected_objects[0]
 
-    obj_instancer = _create_entites(name_prefix, point_cloud, colors_rgba, obj_particle)
+    obj_instancer = _create_entites(name_prefix, points, colors, obj_particle)
 
     if scene is not None:
         scene.collection.objects.link(obj_instancer)
     return obj_instancer
+
+
+def execute_data_tasks(tasks):
+
+    scene = bpy.context.scene
+
+    for task_f, task_kwargs in tasks:
+        if "scene" not in task_kwargs:
+            task_kwargs["scene"] = scene
+        task_f(**task_kwargs)
