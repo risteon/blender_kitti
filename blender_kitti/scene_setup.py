@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """"""
 
+import pathlib
+
 try:
     import bpy
 except ImportError:
@@ -56,6 +58,36 @@ def add_light_source():
     world.light_settings.use_ambient_occlusion = True
 
 
+def add_hdr_background():
+    hdr_filepath = (
+        pathlib.Path(__file__).parent.parent / "assets" / "ruckenkreuz_2k.hdr"
+    )
+    if not hdr_filepath.is_file():
+        raise FileNotFoundError(
+            "Cannot find HDR background file {}".format(str(hdr_filepath))
+        )
+    backgroud_image = bpy.data.images.load(str(hdr_filepath), check_existing=False)
+
+    world = bpy.data.worlds["World"]
+    nodes = world.node_tree.nodes
+    nodes.clear()
+
+    node_tex_env = nodes.new(type="ShaderNodeTexEnvironment")
+    node_tex_env.location = 0, 0
+    node_tex_env.image = backgroud_image
+
+    node_background = nodes.new(type="ShaderNodeBackground")
+    node_background.location = 300, 0
+
+    node_output = nodes.new(type="ShaderNodeOutputWorld")
+    node_output.location = 600, 0
+
+    # link nodes
+    links = world.node_tree.links
+    links.new(node_tex_env.outputs[0], node_background.inputs[0])
+    links.new(node_background.outputs[0], node_output.inputs[0])
+
+
 def add_cameras():
     cam = bpy.data.cameras.new("CameraMain")
     cam_main = bpy.data.objects.new("ObjCameraMain", cam)
@@ -81,28 +113,19 @@ def add_cameras():
     return cam_main, cam_top
 
 
-def enable_cycles_render_devices():
-    # setup render devices. Use all.
-    cycles_prefs = bpy.context.preferences.addons["cycles"].preferences
-    cycles_prefs.compute_device_type = "CUDA"
-    cycles_prefs.get_devices()
-    try:
-        # blender2.81+
-        for device_type in cycles_prefs.get_device_types(bpy.context):
-            cycles_prefs.get_devices_for_type(device_type[0])
-    except AttributeError:
-        pass
-    for device in cycles_prefs.devices:
-        device.use = True
-
-
-def setup_scene(name: str = "blender_kitti"):
+def setup_scene(name: str = "blender_kitti", use_background_image: bool = True):
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
     scene.name = name
+    scene.render.film_transparent = True
 
     clear_all()
-    add_light_source()
+
+    if use_background_image:
+        add_hdr_background()
+    else:
+        add_light_source()
+
     cameras = add_cameras()
 
     return scene, cameras

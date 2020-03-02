@@ -67,6 +67,11 @@ def extract_data_tasks_from_file(
     return tasks
 
 
+def add_data_from_file(filename: str):
+    tasks = extract_data_tasks_from_file(filename)
+    execute_data_tasks(tasks)
+
+
 @click.command(
     context_settings={"ignore_unknown_options": True, "allow_extra_args": True}
 )
