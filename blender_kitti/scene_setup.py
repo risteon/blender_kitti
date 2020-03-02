@@ -107,7 +107,7 @@ def add_cameras():
     cam_top.rotation_mode = "QUATERNION"
     cam_top.rotation_quaternion = (1.0, 0.0, 0.0, 0.0)
     cam_top.data.type = "ORTHO"
-    cam_top.data.ortho_scale = 50.0
+    cam_top.data.ortho_scale = 20.0
     bpy.context.scene.collection.objects.link(cam_top)
 
     return cam_main, cam_top

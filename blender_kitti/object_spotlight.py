@@ -22,6 +22,7 @@ def _create_ground_material(name: str = "ground_material"):
 
     node_tex_coord = nodes.new(type="ShaderNodeTexCoord")
     node_tex_coord.location = 0, 0
+
     node_vector_math = nodes.new(type="ShaderNodeVectorMath")
     node_vector_math.location = 200, 0
     node_vector_math.operation = "DISTANCE"
@@ -36,7 +37,7 @@ def _create_ground_material(name: str = "ground_material"):
     node_color_ramp.location = 600, 0
     color_ramp = node_color_ramp.color_ramp
     color_ramp.color_mode = "RGB"
-    color_ramp.interpolation = "LINEAR"
+    color_ramp.interpolation = "EASE"
     assert len(color_ramp.elements) == 2
     color_ramp.elements[0].position = 0.27
     color_ramp.elements[0].alpha = 0.0
@@ -62,7 +63,8 @@ def _create_ground_material(name: str = "ground_material"):
 
     links = mat.node_tree.links
     links.new(node_tex_coord.outputs[0], node_vector_math.inputs[0])
-    links.new(node_vector_math.outputs[0], node_scale_distance.inputs[0])
+    # for some reason it is outputs[1] for the vector math node (bug?)
+    links.new(node_vector_math.outputs[1], node_scale_distance.inputs[0])
     links.new(node_scale_distance.outputs[0], node_color_ramp.inputs[0])
     links.new(node_color_ramp.outputs[1], node_mix.inputs[0])
     links.new(node_bsdf.outputs[0], node_mix.inputs[1])
