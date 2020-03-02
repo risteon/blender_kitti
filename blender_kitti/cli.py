@@ -10,6 +10,7 @@ import re
 import logging
 import typing
 from collections import defaultdict
+from ruamel.yaml import YAML
 
 from .blender_kitti import add_point_cloud, add_voxels
 from .blender_kitti import execute_data_tasks
@@ -64,6 +65,16 @@ def extract_data_tasks_from_file(
         except KeyError:
             logger.warning("Ignoring unknown entry '{}'.".format(data_type))
 
+    def m(task):
+        kwargs = task[1]
+        try:
+            yaml = YAML(typ="safe")
+            kwargs["config"] = yaml.load(kwargs["config"])
+        except KeyError:
+            pass
+        return task
+
+    tasks = list(map(m, tasks))
     return tasks
 
 
