@@ -259,11 +259,11 @@ def add_voxels(
 def add_point_cloud(
     points: np.ndarray,
     colors: np.ndarray = None,
+    row_splits: np.ndarray = None,
     name_prefix: str = "point_cloud",
     scene=None,
 ):
     # created entities
-
     # Todo replace with non-ops calls to create object
     bpy.ops.mesh.primitive_ico_sphere_add(
         subdivisions=3, radius=0.02, enter_editmode=False, location=(0, 0, 0)
@@ -277,11 +277,11 @@ def add_point_cloud(
     return obj_instancer
 
 
-def execute_data_tasks(tasks):
+def execute_data_tasks(tasks: {str: typing.Any}):
 
     scene = bpy.context.scene
 
-    for task_f, task_kwargs in tasks:
+    for instance_name, (task_f, task_kwargs) in tasks.items():
         if "scene" not in task_kwargs:
             task_kwargs["scene"] = scene
         task_f(**task_kwargs)

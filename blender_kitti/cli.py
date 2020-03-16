@@ -38,7 +38,7 @@ data_tree = defaultdict(lambda: defaultdict(dict))
 
 def extract_data_tasks_from_file(
     filepath: str,
-) -> [(typing.Callable, {str: typing.Any})]:
+) -> {str: (typing.Callable, {str: typing.Any})}:
     logger.info("Processing data file '{}'.".format(filepath))
     data = np.load(filepath)
 
@@ -50,17 +50,19 @@ def extract_data_tasks_from_file(
     matches = [(x, regex_key.fullmatch(x)) for x in data.keys()]
     matches = list(filter(filter_fn, matches))
     matches = [(data[x[0]], x[1].groups()) for x in matches]
-    matches = [((x[1][0], x[1][2], x[1][1]), x[0]) for x in matches]
+    matches = [((x[1][0], x[1][1], x[1][2]), x[0]) for x in matches]
 
     x = data_tree
     for key, data in matches:
         x[key[0]][key[1]][key[2]] = data
 
-    tasks = []
+    tasks = {}
     for data_type, instances in x.items():
         try:
             f = data_structures[data_type]
-            tasks.extend([(f, {"name_prefix": k, **v}) for k, v in instances.items()])
+            tasks.update(
+                {k: (f, {"name_prefix": k, **v}) for k, v in instances.items()}
+            )
 
         except KeyError:
             logger.warning("Ignoring unknown entry '{}'.".format(data_type))
@@ -74,7 +76,7 @@ def extract_data_tasks_from_file(
             pass
         return task
 
-    tasks = list(map(m, tasks))
+    tasks = {k: m(v) for k, v in tasks.items()}
     return tasks
 
 
