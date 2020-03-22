@@ -285,3 +285,6 @@ def execute_data_tasks(tasks: {str: typing.Any}):
         if "scene" not in task_kwargs:
             task_kwargs["scene"] = scene
         task_f(**task_kwargs)
+
+def apply_scene_config(config: {str: typing.Any}):
+    pass

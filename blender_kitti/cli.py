@@ -13,7 +13,7 @@ from collections import defaultdict
 from ruamel.yaml import YAML
 
 from .blender_kitti import add_point_cloud, add_voxels
-from .blender_kitti import execute_data_tasks
+from .blender_kitti import execute_data_tasks, apply_scene_config
 
 
 logger = logging.getLogger(__name__)
@@ -36,6 +36,16 @@ data_structures = {
 data_tree = defaultdict(lambda: defaultdict(dict))
 
 
+def extract_config_from_data(data):
+    try:
+        conf = data['config']
+        conf = bytes(conf).decode('utf-8')
+        yaml = YAML(typ="safe")
+        return yaml.load(conf)
+    except KeyError:
+        return None
+
+
 def extract_data_tasks_from_file(
     filepath: str,
 ) -> {str: (typing.Callable, {str: typing.Any})}:
@@ -53,8 +63,8 @@ def extract_data_tasks_from_file(
     matches = [((x[1][0], x[1][1], x[1][2]), x[0]) for x in matches]
 
     x = data_tree
-    for key, data in matches:
-        x[key[0]][key[1]][key[2]] = data
+    for key, d in matches:
+        x[key[0]][key[1]][key[2]] = d
 
     tasks = {}
     for data_type, instances in x.items():
@@ -77,7 +87,9 @@ def extract_data_tasks_from_file(
         return task
 
     tasks = {k: m(v) for k, v in tasks.items()}
-    return tasks
+
+    config = extract_config_from_data(data)
+    return tasks, config
 
 
 def add_data_from_file(filename: str):
@@ -96,5 +108,6 @@ def render(python, background, filenames):
 
     """
     for filename in filenames:
-        tasks = extract_data_tasks_from_file(filename)
+        tasks, config = extract_data_tasks_from_file(filename)
+        apply_scene_config(config)
         execute_data_tasks(tasks)
