@@ -99,10 +99,9 @@ def create_ground(name_prefix: str = "ground"):
     return obj
 
 
-def add_ground_and_lighting(scene=None, name_prefix: str = "spotlight"):
+def add_spotlight_ground(scene=None, name_prefix: str = "spotlight"):
     if scene is None:
         scene = bpy.context.scene
 
     obj_ground = create_ground(name_prefix="{}_ground".format(name_prefix))
-
     scene.collection.objects.link(obj_ground)

@@ -12,7 +12,7 @@ import typing
 from collections import defaultdict
 from ruamel.yaml import YAML
 
-from .blender_kitti import add_point_cloud, add_voxels
+from .particles import add_point_cloud, add_voxels
 from .blender_kitti import execute_data_tasks, make_scene
 from .system_setup import setup_system
 
@@ -30,6 +30,7 @@ logger.addHandler(handler)
 
 regex_key = re.compile(r"(.+)\+(.+)\+(.+)")
 
+global_config_key = "config"
 data_structures = {
     "point_cloud": add_point_cloud,
     "voxels": add_voxels,
@@ -39,8 +40,8 @@ data_tree = defaultdict(lambda: defaultdict(dict))
 
 def extract_config_from_data(data):
     try:
-        conf = data['config']
-        conf = bytes(conf).decode('utf-8')
+        conf = data[global_config_key]
+        conf = bytes(conf).decode("utf-8")
         yaml = YAML(typ="safe")
         return yaml.load(conf)
     except KeyError:
@@ -53,8 +54,10 @@ def extract_data_tasks_from_file(
     logger.info("Processing data file '{}'.".format(filepath))
     data = np.load(filepath)
 
+    config = extract_config_from_data(data)
+
     def filter_fn(x):
-        if x[1] is None:
+        if x[1] is None and x[0] != global_config_key:
             logger.warning("Ignoring unknown entry key '{}'.".format(x[0]))
         return x[1] is not None
 
@@ -88,8 +91,6 @@ def extract_data_tasks_from_file(
         return task
 
     tasks = {k: m(v) for k, v in tasks.items()}
-
-    config = extract_config_from_data(data)
     return tasks, config
 
 
