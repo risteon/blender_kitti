@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
 """"""
 import typing
-
-try:
-    import bpy
-except ImportError:
-    bpy = None
-    print("bpy module not available.")
 import numpy as np
 
+from .bpy_helper import needs_bpy
+from .scene_setup import setup_scene
 
-def _create_mesh(positions: np.ndarray, name="mesh_points"):
-    """Create mesh with where each point is a pseudo face (three vertices at the same position. """
+
+@needs_bpy()
+def _create_mesh(positions: np.ndarray, name="mesh_points", *, bpy):
+    """Create mesh with where each point is a pseudo face
+    (three vertices at the same position.
+    """
     assert positions.ndim == 2
     assert positions.shape[1] == 3
 
@@ -38,8 +38,9 @@ def _create_mesh(positions: np.ndarray, name="mesh_points"):
     return mesh
 
 
+@needs_bpy()
 def _create_instancer_obj(
-    positions: np.ndarray, name_instancer_obj: str, name_mesh: str
+    positions: np.ndarray, name_instancer_obj: str, name_mesh: str, *, bpy
 ):
     assert positions.ndim == 2 and positions.shape[1] == 3
 
@@ -61,7 +62,8 @@ def _create_instancer_obj(
     return obj_instancer
 
 
-def _create_simple_material(base_color, name_material: str):
+@needs_bpy()
+def _create_simple_material(base_color, name_material: str, *, bpy):
     if name_material in bpy.data.materials:
         raise RuntimeError("Material '{}' already exists")
     mat = bpy.data.materials.new(name=name_material)
@@ -86,8 +88,9 @@ def _create_simple_material(base_color, name_material: str):
     return mat
 
 
+@needs_bpy()
 def _create_uv_mapped_material(
-    color_image, name_material: str = "material_point_cloud"
+    color_image, name_material: str = "material_point_cloud", *, bpy
 ):
     assert color_image.size[1] == 1
 
@@ -164,7 +167,8 @@ def _create_uv_mapped_material(
     return mat
 
 
-def _create_color_image(colors_rgba: np.ndarray, name: str):
+@needs_bpy()
+def _create_color_image(colors_rgba: np.ndarray, name: str, *, bpy):
     assert colors_rgba.ndim == 2
     # dtype and alpha channel checks
     if colors_rgba.dtype == np.float32:
@@ -228,11 +232,14 @@ def _create_entites(
     return obj_instancer
 
 
+@needs_bpy()
 def add_voxels(
     voxels: np.ndarray,
     colors: np.ndarray = None,
     name_prefix: str = "voxels",
     scene=None,
+    *,
+    bpy
 ):
     assert voxels.ndim == 3
     assert voxels.dtype == np.bool
@@ -256,12 +263,15 @@ def add_voxels(
     return obj_instancer
 
 
+@needs_bpy()
 def add_point_cloud(
     points: np.ndarray,
     colors: np.ndarray = None,
     row_splits: np.ndarray = None,
     name_prefix: str = "point_cloud",
     scene=None,
+    *,
+    bpy
 ):
     # created entities
     # Todo replace with non-ops calls to create object
@@ -277,14 +287,33 @@ def add_point_cloud(
     return obj_instancer
 
 
-def execute_data_tasks(tasks: {str: typing.Any}):
-
-    scene = bpy.context.scene
+def execute_data_tasks(tasks: {str: typing.Any}, scene):
 
     for instance_name, (task_f, task_kwargs) in tasks.items():
         if "scene" not in task_kwargs:
             task_kwargs["scene"] = scene
         task_f(**task_kwargs)
 
-def apply_scene_config(config: {str: typing.Any}):
-    pass
+
+def make_scene(config: typing.Union[typing.Dict[str, typing.Any], None] = None):
+    if config is None:
+        config = {}
+
+    # Todo some kind of default?
+    use_background_image = True
+    scene_name = "blender_kitti"
+
+    if "scene_setup" in config:
+        scene_mode = config["scene_setup"]
+        if scene_mode == "single_object":
+            use_background_image = True
+        else:
+            raise NotImplementedError()
+
+    if "sample_id" in config:
+        scene_name = config["sample_id"]
+
+    scene, cameras = setup_scene(
+        name=scene_name, use_background_image=use_background_image
+    )
+    return scene, cameras

@@ -2,15 +2,11 @@
 """"""
 
 import pathlib
-
-try:
-    import bpy
-except ImportError:
-    bpy = None
-    print("bpy module not available.")
+from .bpy_helper import needs_bpy
 
 
-def clear_all():
+@needs_bpy()
+def clear_all(*, bpy):
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
 
@@ -24,7 +20,8 @@ def clear_all():
         bpy.data.collections.remove(c)
 
 
-def add_light_source():
+@needs_bpy()
+def add_light_source(*, bpy):
     bpy.ops.mesh.primitive_plane_add()
     scene_light = bpy.context.selected_objects[0]
     scene_light.name = "SceneLight"
@@ -58,7 +55,8 @@ def add_light_source():
     world.light_settings.use_ambient_occlusion = True
 
 
-def add_hdr_background():
+@needs_bpy()
+def add_hdr_background(*, bpy):
     hdr_filepath = (
         pathlib.Path(__file__).parent.parent / "assets" / "ruckenkreuz_2k.hdr"
     )
@@ -66,7 +64,7 @@ def add_hdr_background():
         raise FileNotFoundError(
             "Cannot find HDR background file {}".format(str(hdr_filepath))
         )
-    backgroud_image = bpy.data.images.load(str(hdr_filepath), check_existing=False)
+    background_image = bpy.data.images.load(str(hdr_filepath), check_existing=False)
 
     world = bpy.data.worlds["World"]
     nodes = world.node_tree.nodes
@@ -74,7 +72,7 @@ def add_hdr_background():
 
     node_tex_env = nodes.new(type="ShaderNodeTexEnvironment")
     node_tex_env.location = 0, 0
-    node_tex_env.image = backgroud_image
+    node_tex_env.image = background_image
 
     node_background = nodes.new(type="ShaderNodeBackground")
     node_background.location = 300, 0
@@ -88,17 +86,18 @@ def add_hdr_background():
     links.new(node_background.outputs[0], node_output.inputs[0])
 
 
-def add_cameras():
+@needs_bpy()
+def add_cameras(scene, *, bpy):
     cam = bpy.data.cameras.new("CameraMain")
     cam_main = bpy.data.objects.new("ObjCameraMain", cam)
     cam_main.location = (-33.3056, 24.1123, 26.0909)
     cam_main.rotation_mode = "QUATERNION"
     cam_main.rotation_quaternion = (0.42119, 0.21272, -0.39741, -0.78703)
     cam_main.data.type = "PERSP"
-    bpy.context.scene.collection.objects.link(cam_main)
+    scene.collection.objects.link(cam_main)
 
     # make this the main scene camera
-    bpy.context.scene.camera = cam_main
+    scene.camera = cam_main
 
     # top view orthograpic. Vehicle (x-axis) faces to the right
     cam = bpy.data.cameras.new("CameraTopView")
@@ -108,12 +107,13 @@ def add_cameras():
     cam_top.rotation_quaternion = (1.0, 0.0, 0.0, 0.0)
     cam_top.data.type = "ORTHO"
     cam_top.data.ortho_scale = 20.0
-    bpy.context.scene.collection.objects.link(cam_top)
+    scene.collection.objects.link(cam_top)
 
     return cam_main, cam_top
 
 
-def setup_scene(name: str = "blender_kitti", use_background_image: bool = True):
+@needs_bpy(default_return=(None, []))
+def setup_scene(name: str = "blender_kitti", use_background_image: bool = True, *, bpy):
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
     scene.name = name
@@ -126,6 +126,5 @@ def setup_scene(name: str = "blender_kitti", use_background_image: bool = True):
     else:
         add_light_source()
 
-    cameras = add_cameras()
-
+    cameras = add_cameras(scene)
     return scene, cameras

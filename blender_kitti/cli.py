@@ -13,7 +13,8 @@ from collections import defaultdict
 from ruamel.yaml import YAML
 
 from .blender_kitti import add_point_cloud, add_voxels
-from .blender_kitti import execute_data_tasks, apply_scene_config
+from .blender_kitti import execute_data_tasks, make_scene
+from .system_setup import setup_system
 
 
 logger = logging.getLogger(__name__)
@@ -92,9 +93,11 @@ def extract_data_tasks_from_file(
     return tasks, config
 
 
-def add_data_from_file(filename: str):
-    tasks = extract_data_tasks_from_file(filename)
-    execute_data_tasks(tasks)
+def process_file(filename: str):
+    tasks, config = extract_data_tasks_from_file(filename)
+    scene, cameras = make_scene(config)
+    execute_data_tasks(tasks, scene)
+    return scene, cameras
 
 
 @click.command(
@@ -102,12 +105,14 @@ def add_data_from_file(filename: str):
 )
 @click.option("--python", required=False)
 @click.option("--background/--no-background", required=False)
+@click.option("--render_config", default=None)
 @click.argument("filenames", type=click.Path(exists=True), nargs=-1)
-def render(python, background, filenames):
+def render(python, background, render_config, filenames):
     """
 
     """
     for filename in filenames:
-        tasks, config = extract_data_tasks_from_file(filename)
-        apply_scene_config(config)
-        execute_data_tasks(tasks)
+        scene, cameras = process_file(filename)
+
+        # Todo read and apply render config
+        setup_system(enable_gpu_rendering=True, scene=scene)
