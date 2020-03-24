@@ -3,11 +3,11 @@
 import typing
 import numpy as np
 
-from .bpy_helper import needs_bpy
+from .bpy_helper import needs_bpy_bmesh
 
 
-@needs_bpy()
-def _create_mesh(positions: np.ndarray, name="mesh_points", *, bpy):
+@needs_bpy_bmesh()
+def _create_instancer_mesh(positions: np.ndarray, name="mesh_points", *, bpy):
     """Create mesh with where each point is a pseudo face
     (three vertices at the same position.
     """
@@ -37,7 +37,7 @@ def _create_mesh(positions: np.ndarray, name="mesh_points", *, bpy):
     return mesh
 
 
-@needs_bpy()
+@needs_bpy_bmesh()
 def _create_instancer_obj(
     positions: np.ndarray, name_instancer_obj: str, name_mesh: str, *, bpy
 ):
@@ -46,7 +46,7 @@ def _create_instancer_obj(
     if name_instancer_obj in bpy.data.objects:
         raise RuntimeError("Object '{}' already exists.".format(name_instancer_obj))
 
-    mesh = _create_mesh(positions, name_mesh)
+    mesh = _create_instancer_mesh(positions, name_mesh)
 
     vert_uvs = np.repeat(np.arange(0, len(mesh.vertices)), 3, axis=0)
     # add y coordinate
@@ -65,7 +65,7 @@ def _create_instancer_obj(
     return obj_instancer
 
 
-@needs_bpy()
+@needs_bpy_bmesh()
 def _create_simple_material(base_color, name_material: str, *, bpy):
     if name_material in bpy.data.materials:
         raise RuntimeError("Material '{}' already exists")
@@ -91,7 +91,7 @@ def _create_simple_material(base_color, name_material: str, *, bpy):
     return mat
 
 
-@needs_bpy()
+@needs_bpy_bmesh()
 def _create_uv_mapped_material(
     color_image, name_material: str = "material_point_cloud", *, bpy
 ):
@@ -166,7 +166,7 @@ def _create_uv_mapped_material(
     return mat
 
 
-@needs_bpy()
+@needs_bpy_bmesh()
 def _create_color_image(colors_rgba: np.ndarray, name: str, *, bpy):
     assert colors_rgba.ndim == 2
     # dtype and alpha channel checks
@@ -231,7 +231,7 @@ def _create_entites(
     return obj_instancer
 
 
-@needs_bpy()
+@needs_bpy_bmesh()
 def add_voxels(
     voxels: np.ndarray,
     colors: np.ndarray = None,
@@ -262,7 +262,7 @@ def add_voxels(
     return obj_instancer
 
 
-@needs_bpy()
+@needs_bpy_bmesh()
 def add_point_cloud(
     points: np.ndarray,
     colors: np.ndarray = None,

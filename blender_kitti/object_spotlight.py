@@ -3,15 +3,11 @@
 
 """
 
-try:
-    import bpy
-    import bmesh
-except ImportError:
-    bpy = None
-    print("bpy module not available.")
+from .bpy_helper import needs_bpy_bmesh
 
 
-def _create_ground_material(name: str = "ground_material"):
+@needs_bpy_bmesh()
+def _create_ground_material(name: str = "ground_material", *, bpy):
     if name in bpy.data.materials:
         raise RuntimeError("Material '{}' already exists".format(name))
 
@@ -74,7 +70,8 @@ def _create_ground_material(name: str = "ground_material"):
     return mat
 
 
-def create_ground(name_prefix: str = "ground"):
+@needs_bpy_bmesh()
+def create_ground(name_prefix: str = "ground", *, bpy, bmesh):
     diameter: float = 10.0
     height: float = 0.1
     bm = bmesh.new()
@@ -89,17 +86,18 @@ def create_ground(name_prefix: str = "ground"):
         calc_uvs=False,
     )
 
-    me = bpy.data.meshes.new("mesh_{}".format(name_prefix))
+    me = bpy.data.meshes.new("{}_mesh".format(name_prefix))
     bm.to_mesh(me)
     bm.free()
 
-    obj = bpy.data.objects.new("obj_{}".format(name_prefix), me)
-    material = _create_ground_material("material_{}".format(name_prefix))
+    obj = bpy.data.objects.new("{}_obj".format(name_prefix), me)
+    material = _create_ground_material("{}_material".format(name_prefix))
     obj.data.materials.append(material)
     return obj
 
 
-def add_spotlight_ground(scene=None, name_prefix: str = "spotlight"):
+@needs_bpy_bmesh()
+def add_spotlight_ground(scene=None, name_prefix: str = "spotlight", *, bpy):
     if scene is None:
         scene = bpy.context.scene
 

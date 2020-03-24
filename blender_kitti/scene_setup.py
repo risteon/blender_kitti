@@ -2,10 +2,10 @@
 """"""
 
 import pathlib
-from .bpy_helper import needs_bpy
+from .bpy_helper import needs_bpy_bmesh
 
 
-@needs_bpy()
+@needs_bpy_bmesh()
 def clear_all(*, bpy):
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -20,7 +20,7 @@ def clear_all(*, bpy):
         bpy.data.collections.remove(c)
 
 
-@needs_bpy()
+@needs_bpy_bmesh()
 def add_light_source(*, bpy):
     bpy.ops.mesh.primitive_plane_add()
     scene_light = bpy.context.selected_objects[0]
@@ -55,7 +55,7 @@ def add_light_source(*, bpy):
     world.light_settings.use_ambient_occlusion = True
 
 
-@needs_bpy()
+@needs_bpy_bmesh()
 def add_hdr_background(*, bpy):
     hdr_filepath = (
         pathlib.Path(__file__).parent.parent / "assets" / "ruckenkreuz_2k.hdr"
@@ -86,7 +86,7 @@ def add_hdr_background(*, bpy):
     links.new(node_background.outputs[0], node_output.inputs[0])
 
 
-@needs_bpy()
+@needs_bpy_bmesh()
 def add_cameras(scene, *, bpy):
     cam = bpy.data.cameras.new("CameraMain")
     cam_main = bpy.data.objects.new("ObjCameraMain", cam)
@@ -112,7 +112,7 @@ def add_cameras(scene, *, bpy):
     return cam_main, cam_top
 
 
-@needs_bpy(default_return=(None, []))
+@needs_bpy_bmesh(default_return=(None, []))
 def setup_scene(name: str = "blender_kitti", use_background_image: bool = True, *, bpy):
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
