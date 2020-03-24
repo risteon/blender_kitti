@@ -4,6 +4,7 @@ import typing
 import numpy as np
 
 from .bpy_helper import needs_bpy_bmesh
+from .material_shader import create_simple_material, create_uv_mapped_material
 
 
 @needs_bpy_bmesh()
@@ -66,107 +67,6 @@ def _create_instancer_obj(
 
 
 @needs_bpy_bmesh()
-def _create_simple_material(base_color, name_material: str, *, bpy):
-    if name_material in bpy.data.materials:
-        raise RuntimeError("Material '{}' already exists")
-    mat = bpy.data.materials.new(name=name_material)
-    mat.use_nodes = True
-    nodes = mat.node_tree.nodes
-    nodes.clear()
-
-    node_bsdf = nodes.new(type="ShaderNodeBsdfPrincipled")
-    node_bsdf.inputs[0].default_value = base_color
-    node_bsdf.inputs[7].default_value = 0.65  # roughness
-    node_bsdf.inputs[12].default_value = 0.0  # clearcoat
-    node_bsdf.inputs[13].default_value = 0.25  # clearcoat roughness
-    node_bsdf.location = 0, 0
-
-    node_output = nodes.new(type="ShaderNodeOutputMaterial")
-    node_output.location = 400, 0
-
-    # link nodes
-    links = mat.node_tree.links
-    links.new(node_bsdf.outputs[0], node_output.inputs[0])
-
-    return mat
-
-
-@needs_bpy_bmesh()
-def _create_uv_mapped_material(
-    color_image, name_material: str = "material_point_cloud", *, bpy
-):
-    assert color_image.size[1] == 1
-
-    if name_material in bpy.data.materials:
-        raise RuntimeError("Material '{}' already exists")
-
-    mat = bpy.data.materials.new(name=name_material)
-    mat.use_nodes = True
-    nodes = mat.node_tree.nodes
-    nodes.clear()
-
-    # create uv input node
-    node_uv = nodes.new(type="ShaderNodeUVMap")
-    node_uv.location = 0, 0
-    node_uv.from_instancer = True
-    node_uv.location = 0, 0
-    node_sep = nodes.new(type="ShaderNodeSeparateXYZ")
-    node_sep.location = 180, 0
-    node_add_x = nodes.new(type="ShaderNodeMath")
-    node_add_x.inputs[1].default_value = 0.5
-    node_add_x.operation = "ADD"
-    node_add_x.location = 360, 0
-    node_add_y = nodes.new(type="ShaderNodeMath")
-    node_add_y.inputs[1].default_value = 0.5
-    node_add_y.operation = "ADD"
-    node_add_y.location = 450, -200
-    node_div_x = nodes.new(type="ShaderNodeMath")
-    node_div_x.inputs[1].default_value = float(color_image.size[0])
-    node_div_x.operation = "DIVIDE"
-    node_div_x.location = 520, 0
-    node_comb = nodes.new(type="ShaderNodeCombineXYZ")
-    node_comb.inputs[2].default_value = 0.0
-    node_comb.location = 700, 0
-
-    node_text = nodes.new(type="ShaderNodeTexImage")
-    node_text.interpolation = "Closest"
-    node_text.extension = "CLIP"
-    node_text.image = color_image
-    node_text.location = 900, 0
-
-    # mix point colors with simple black material
-    node_mix_rgb = nodes.new(type="ShaderNodeMixRGB")
-    node_mix_rgb.location = 1200, 0
-    node_mix_rgb.inputs[0].default_value = 0.0  # all on vertex color
-    node_mix_rgb.inputs[2].default_value = (0.01, 0.01, 0.01, 1.0)
-
-    # create shader node
-    node_bsdf = nodes.new(type="ShaderNodeBsdfPrincipled")
-    node_bsdf.inputs[7].default_value = 0.65  # roughness
-    node_bsdf.inputs[12].default_value = 0.0  # clearcoat
-    node_bsdf.inputs[13].default_value = 0.25  # clearcoat roughness
-    node_bsdf.location = 1500, 0
-
-    node_output = nodes.new(type="ShaderNodeOutputMaterial")
-    node_output.location = 1800, 0
-
-    # link nodes
-    links = mat.node_tree.links
-    links.new(node_uv.outputs[0], node_sep.inputs[0])
-    links.new(node_sep.outputs[0], node_add_x.inputs[0])
-    links.new(node_sep.outputs[1], node_add_y.inputs[0])
-    links.new(node_add_x.outputs[0], node_div_x.inputs[0])
-    links.new(node_div_x.outputs[0], node_comb.inputs[0])
-    links.new(node_add_y.outputs[0], node_comb.inputs[1])
-    links.new(node_comb.outputs[0], node_text.inputs[0])
-    links.new(node_text.outputs[0], node_mix_rgb.inputs[1])
-    links.new(node_mix_rgb.outputs[0], node_bsdf.inputs[0])
-    links.new(node_bsdf.outputs[0], node_output.inputs[0])
-
-    return mat
-
-
-@needs_bpy_bmesh()
 def _create_color_image(colors_rgba: np.ndarray, name: str, *, bpy):
     assert colors_rgba.ndim == 2
     # dtype and alpha channel checks
@@ -216,9 +116,9 @@ def _create_entites(
     if colors is not None:
         image = _create_color_image(colors, name_image)
         # the particle obj will use this material
-        material = _create_uv_mapped_material(image, name_material)
+        material = create_uv_mapped_material(image, name_material)
     else:
-        material = _create_simple_material(
+        material = create_simple_material(
             base_color=(0.1, 0.1, 0.1, 1.0), name_material=name_material
         )
 

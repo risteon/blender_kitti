@@ -3,6 +3,7 @@
 import numpy as np
 
 from .bpy_helper import needs_bpy_bmesh
+from .material_shader import create_vertex_color_material
 
 
 @needs_bpy_bmesh()
@@ -62,7 +63,7 @@ def create_mesh(
 def create_obj_from_mesh(
     vertices: np.ndarray,
     triangles: np.ndarray,
-    vertex_colors: [np.ndarray] = (),
+    vertex_colors: {str: np.ndarray} = None,
     *,
     name_prefix: str,
     bpy,
@@ -77,81 +78,33 @@ def create_obj_from_mesh(
         raise RuntimeError("Obj '{}' already exists.".format(obj_name))
     obj = bpy.data.objects.new(obj_name, mesh)
 
-    # ### MATERIAL
-    # Vertex color material
-    mat = bpy.data.materials.new(name="VertexColorMaterial")
-    mat.use_nodes = True
-    nodes = mat.node_tree.nodes
-    nodes.clear()
+    if vertex_colors is None:
+        vertex_color_layer_names = []
+    else:
+        vertex_color_layer_names = list(vertex_colors.keys())
 
-    # create attribute input node
-    node_input = nodes.new(type="ShaderNodeAttribute")
-    node_input.location = 0, 0
-    node_input.attribute_name = "color_sem"
+    default_color = 0.0, 0.0, 0.0, 1.0  # black
+    mat, selector = create_vertex_color_material(
+        vertex_color_layer_names,
+        default_color,
+        mode='select',
+        name_material="{}_material".format(name_prefix),
+    )
 
-    # create attribute input node
-    node_input_grads = nodes.new(type="ShaderNodeAttribute")
-    node_input_grads.location = 0, -200
-    node_input_grads.attribute_name = "color_grads"
+    # Todo: handle multiple vertex color layers
+    if vertex_colors is None:
+        selector(-1)
+    else:
+        selector(0)
 
-    # mix vertex colors with simple reconstruction material
-    node_mix_rgb = nodes.new(type="ShaderNodeMixRGB")
-    node_mix_rgb.location = 200, 0
-    node_mix_rgb.inputs[0].default_value = 0.0  # all on vertex color
-    node_mix_rgb.inputs[2].default_value = (0.1, 0.1, 0.1, 1.0)
-
-    # hue saturation value node
-    node_color = nodes.new(type="ShaderNodeHueSaturation")
-    node_color.inputs[0].default_value = 0.5
-    node_color.inputs[1].default_value = 1.0
-    node_color.inputs[4].default_value = (1.0, 1.0, 1.0, 1.0)
-
-    node_rgb_sep = nodes.new(type="ShaderNodeSeparateRGB")
-
-    node_grad_value_mult = nodes.new(type="ShaderNodeMath")
-    node_grad_value_mult.inputs[1].default_value = 1.2
-    node_grad_value_mult.operation = "MULTIPLY"
-
-    # mix between sem colors and grad colors
-    node_mix_semgrad = nodes.new(type="ShaderNodeMixRGB")
-    node_mix_semgrad.location = 400, -150
-    node_mix_semgrad.inputs[0].default_value = 0.0  # all on sem vertex color
-
-    # create shader node
-    node_bsdf = nodes.new(type="ShaderNodeBsdfPrincipled")
-    node_bsdf.inputs[7].default_value = 0.65  # roughness
-    node_bsdf.inputs[12].default_value = 1.0  # clearcoat
-    node_bsdf.inputs[13].default_value = 0.50  # clearcoat roughness
-    node_bsdf.location = 620, 0
-    # create output node
-    node_output = nodes.new(type="ShaderNodeOutputMaterial")
-    node_output.location = 900, 0
-    # link nodes
-    links = mat.node_tree.links
-    links.new(node_input.outputs[0], node_mix_rgb.inputs[1])
-    links.new(node_mix_rgb.outputs[0], node_mix_semgrad.inputs[1])
-
-    # old grad color
-    # links.new(node_input_grads.outputs[0], node_mix_semgrad.inputs[2])
-    # new grad color
-    links.new(node_input_grads.outputs[0], node_rgb_sep.inputs[0])
-    links.new(node_rgb_sep.outputs[0], node_grad_value_mult.inputs[0])
-    links.new(node_grad_value_mult.outputs[0], node_color.inputs[2])
-    links.new(node_color.outputs[0], node_mix_semgrad.inputs[2])
-
-    links.new(node_mix_semgrad.outputs[0], node_bsdf.inputs[0])
-    links.new(node_bsdf.outputs[0], node_output.inputs[0])
-
-    # add material to object
     obj.data.materials.append(mat)
-
     return obj
 
 
 def add_object_from_mesh(
     vertices: np.ndarray,
     triangles: np.ndarray,
-    vertex_colors: [np.ndarray] = (),
+    vertex_colors: {str: np.ndarray} = None,
     *,
     scene,
     name_prefix: str,
@@ -159,4 +112,4 @@ def add_object_from_mesh(
     obj = create_obj_from_mesh(
         vertices, triangles, vertex_colors, name_prefix=name_prefix
     )
-    scene.colletions.objects.link(obj)
+    scene.collection.objects.link(obj)
