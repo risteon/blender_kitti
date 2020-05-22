@@ -87,8 +87,23 @@ def add_hdr_background(*, bpy):
 
 
 @needs_bpy_bmesh()
-def add_cameras(scene, *, bpy):
-    cam = bpy.data.cameras.new("CameraMain")
+def create_camera_top_view_ortho(
+    name: str = "CameraTopViewOrtho", center=(0.0, 0.0), scale: float = 20.0, *, bpy
+):
+    """top view orthographic. """
+    cam = bpy.data.cameras.new(name)
+    cam = bpy.data.objects.new("Obj" + name, cam)
+    cam.location = center + (45.0,)
+    cam.rotation_mode = "QUATERNION"
+    cam.rotation_quaternion = (1.0, 0.0, 0.0, 0.0)
+    cam.data.type = "ORTHO"
+    cam.data.ortho_scale = scale
+    return cam
+
+
+@needs_bpy_bmesh()
+def add_cameras_default(scene, *, bpy):
+    cam = bpy.data.cameras.new("Main")
     cam_main = bpy.data.objects.new("ObjCameraMain", cam)
     cam_main.location = (-33.3056, 24.1123, 26.0909)
     cam_main.rotation_mode = "QUATERNION"
@@ -99,14 +114,7 @@ def add_cameras(scene, *, bpy):
     # make this the main scene camera
     scene.camera = cam_main
 
-    # top view orthograpic. Vehicle (x-axis) faces to the right
-    cam = bpy.data.cameras.new("CameraTopView")
-    cam_top = bpy.data.objects.new("ObjCameraTopView", cam)
-    cam_top.location = (0.0, 0.0, 45.0)
-    cam_top.rotation_mode = "QUATERNION"
-    cam_top.rotation_quaternion = (1.0, 0.0, 0.0, 0.0)
-    cam_top.data.type = "ORTHO"
-    cam_top.data.ortho_scale = 20.0
+    cam_top = create_camera_top_view_ortho()
     scene.collection.objects.link(cam_top)
 
     return cam_main, cam_top
@@ -125,6 +133,4 @@ def setup_scene(name: str = "blender_kitti", use_background_image: bool = True, 
         add_hdr_background()
     else:
         add_light_source()
-
-    cameras = add_cameras(scene)
-    return scene, cameras
+    return scene
