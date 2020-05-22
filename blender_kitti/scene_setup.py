@@ -102,21 +102,37 @@ def create_camera_top_view_ortho(
 
 
 @needs_bpy_bmesh()
-def add_cameras_default(scene, *, bpy):
-    cam = bpy.data.cameras.new("Main")
-    cam_main = bpy.data.objects.new("ObjCameraMain", cam)
-    cam_main.location = (-33.3056, 24.1123, 26.0909)
-    cam_main.rotation_mode = "QUATERNION"
-    cam_main.rotation_quaternion = (0.42119, 0.21272, -0.39741, -0.78703)
-    cam_main.data.type = "PERSP"
-    scene.collection.objects.link(cam_main)
+def create_camera_perspective(
+    location,
+    rotation_quat,
+    name: str = "CameraPerspective",
+    focal_length: float = 50.0,
+    *,
+    bpy
+):
+    cam = bpy.data.cameras.new(name)
+    cam = bpy.data.objects.new("Obj" + name, cam)
+    cam.location = location
+    cam.rotation_mode = "QUATERNION"
+    cam.rotation_quaternion = rotation_quat
+    cam.data.type = "PERSP"
+    cam.data.lens = focal_length
+    return cam
 
-    # make this the main scene camera
-    scene.camera = cam_main
+
+def add_cameras_default(scene):
+    """ Make two camera (main/top) default setup for demo images."""
+    cam_main = create_camera_perspective(
+        location=(-33.3056, 24.1123, 26.0909),
+        rotation_quat=(0.42119, 0.21272, -0.39741, -0.78703),
+    )
+    scene.collection.objects.link(cam_main)
 
     cam_top = create_camera_top_view_ortho()
     scene.collection.objects.link(cam_top)
 
+    # make this the main scene camera
+    scene.camera = cam_main
     return cam_main, cam_top
 
 
