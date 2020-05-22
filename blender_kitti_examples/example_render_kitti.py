@@ -1,15 +1,52 @@
 # -*- coding: utf-8 -*-
 """Example renders of point cloud and voxels"""
 
-import bpy
+import pathlib
+from blender_kitti.bpy_helper import needs_bpy_bmesh
 from blender_kitti import add_point_cloud, add_voxels, setup_scene
 from .data import get_semantic_kitti_point_cloud, get_semantic_kitti_voxels
+
+
+def dry_render(_scene, cameras, output_path):
+    for cam, name in zip(cameras, ["main", "top"]):
+
+        if isinstance(output_path, str):
+            p = output_path.format(name)
+        elif isinstance(output_path, pathlib.Path):
+            p = str(output_path / (name + ".png"))
+        elif callable(output_path):
+            p = str(output_path(name))
+        else:
+            raise ValueError(
+                "Cannot handle output path type {}".format(type(output_path))
+            )
+        print("Render camera {} to file path {}.".format(name, p))
+
+
+@needs_bpy_bmesh(alternative_func=dry_render)
+def render(scene, cameras, output_path, *, bpy):
+    for cam, name in zip(cameras, ["main", "top"]):
+
+        if isinstance(output_path, str):
+            p = output_path.format(name)
+        elif isinstance(output_path, pathlib.Path):
+            p = output_path / (name + ".png")
+        elif callable(output_path):
+            p = output_path(name)
+        else:
+            raise ValueError(
+                "Cannot handle output path type {}".format(type(output_path))
+            )
+
+        scene.camera = cam
+        scene.render.filepath = p
+        bpy.ops.render.render(write_still=True)
 
 
 def render_kitti_point_cloud(gpu_compute=False):
 
     scene, cameras = setup_scene()
-    scene.view_layers['View Layer'].cycles.use_denoising = True
+    scene.view_layers["View Layer"].cycles.use_denoising = True
     scene.render.resolution_percentage = 100
     scene.render.resolution_x = 640
     scene.render.resolution_y = 480
@@ -17,19 +54,29 @@ def render_kitti_point_cloud(gpu_compute=False):
     scene.render.film_transparent = True
     #
     if gpu_compute:
-        scene.cycles.device = 'GPU'
+        scene.cycles.device = "GPU"
     else:
-        scene.cycles.device = 'CPU'
+        scene.cycles.device = "CPU"
 
     point_cloud, color = get_semantic_kitti_point_cloud()
     _ = add_point_cloud(point_cloud, color, scene=scene)
-
-    for cam, name in zip(cameras, ['main', 'top']):
-        scene.camera = cam
-        scene.render.filepath = '/tmp/blender_kitti_render_point_cloud_{}.png'.format(name)
-        bpy.ops.render.render(write_still=True)
+    render(scene, cameras, "/tmp/blender_kitti_render_point_cloud_{}.png")
 
 
-def render_kitti_voxels():
+def render_kitti_voxels(gpu_compute=False):
+
+    scene, cameras = setup_scene()
+    scene.view_layers["View Layer"].cycles.use_denoising = True
+    scene.render.resolution_percentage = 100
+    scene.render.resolution_x = 640
+    scene.render.resolution_y = 480
+    # alpha background
+    scene.render.film_transparent = True
+    #
+    if gpu_compute:
+        scene.cycles.device = "GPU"
+    else:
+        scene.cycles.device = "CPU"
+
     voxels, color = get_semantic_kitti_voxels()
-    obj_voxels = add_voxels(voxels, color)
+    _ = add_voxels(voxels, color, scene=scene)

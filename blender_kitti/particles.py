@@ -1,10 +1,22 @@
 # -*- coding: utf-8 -*-
 """"""
 import typing
+import logging
 import numpy as np
 
 from .bpy_helper import needs_bpy_bmesh
 from .material_shader import create_simple_material, create_uv_mapped_material
+
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+formatter = logging.Formatter(
+    fmt="%(asctime)s - %(levelname)s - %(module)s - %(message)s"
+)
+handler = logging.StreamHandler()
+handler.setFormatter(formatter)
+handler.setLevel(logging.INFO)
+logger.addHandler(handler)
 
 
 @needs_bpy_bmesh()
@@ -35,6 +47,9 @@ def _create_instancer_mesh(positions: np.ndarray, name="mesh_points", *, bpy):
 
     mesh.update()
     mesh.validate()
+
+    logger.info("Created instancer mesh with {} vertices.".format(len(positions)))
+
     return mesh
 
 
@@ -50,7 +65,7 @@ def _create_instancer_obj(
     mesh = _create_instancer_mesh(positions, name_mesh)
 
     vert_uvs = np.repeat(np.arange(0, len(mesh.vertices)), 3, axis=0)
-    # add y coordinate
+    # add zero y coordinate
     vert_uvs = np.stack((vert_uvs, np.zeros_like(vert_uvs)), axis=-1)
     mesh.uv_layers.new(name="per_vertex_dummy_uv")
     mesh.uv_layers[-1].data.foreach_set(
@@ -99,7 +114,7 @@ def _create_color_image(colors_rgba: np.ndarray, name: str, *, bpy):
     return image
 
 
-def _create_entites(
+def _create_particle_instancer(
     name_prefix: str,
     positions: np.ndarray,
     colors: typing.Union[None, np.ndarray],
@@ -140,6 +155,15 @@ def add_voxels(
     *,
     bpy
 ):
+    """
+
+    :param voxels: boolean array marking occupancy
+    :param colors:
+    :param name_prefix:
+    :param scene:
+    :param bpy:
+    :return:
+    """
     assert voxels.ndim == 3
     assert voxels.dtype == np.bool
 
@@ -156,10 +180,10 @@ def add_voxels(
     bpy.ops.mesh.primitive_cube_add(size=0.16, enter_editmode=False, location=(0, 0, 0))
     obj_particle = bpy.context.selected_objects[0]
 
-    obj_instancer = _create_entites(name_prefix, coords, colors, obj_particle)
+    obj_voxels = _create_particle_instancer(name_prefix, coords, colors, obj_particle)
     if scene is not None:
-        scene.collection.objects.link(obj_instancer)
-    return obj_instancer
+        scene.collection.objects.link(obj_voxels)
+    return obj_voxels
 
 
 @needs_bpy_bmesh()
@@ -179,8 +203,10 @@ def add_point_cloud(
     )
     obj_particle = bpy.context.selected_objects[0]
 
-    obj_instancer = _create_entites(name_prefix, points, colors, obj_particle)
+    obj_point_cloud = _create_particle_instancer(
+        name_prefix, points, colors, obj_particle
+    )
 
     if scene is not None:
-        scene.collection.objects.link(obj_instancer)
-    return obj_instancer
+        scene.collection.objects.link(obj_point_cloud)
+    return obj_point_cloud
