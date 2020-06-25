@@ -1,0 +1,12 @@
+language: python
+
+cache:
+  directories:
+    - $HOME/.blender_download_cache
+
+python:
+  - "3.7"
+install:
+  - scripts/ci_install.sh
+script:
+  - $HOME/blender/blender --background --python tests/test_dummy.py
