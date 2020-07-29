@@ -6,9 +6,14 @@
 
 import click
 import logging
+import typing
+
+from ruamel.yaml import YAML
 
 from .blender_kitti import execute_data_tasks, make_scene, extract_data_tasks_from_file
 from .system_setup import setup_system
+from .scene_setup import add_cameras_default
+from .bpy_helper import needs_bpy_bmesh
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -21,19 +26,57 @@ handler.setLevel(logging.INFO)
 logger.addHandler(handler)
 
 
-def process_file(filename: str):
-    tasks, config = extract_data_tasks_from_file(filename)
-    try:
-        scene, cameras = make_scene(config)
-    except ImportError:
-        logger.warning("Ignoring scene setup.")
-        scene, cameras = None, None
+def process_file(filename: str, scene=None):
+    tasks, global_config = extract_data_tasks_from_file(filename)
+    if scene is None:
+        try:
+            scene = make_scene(global_config)
+        except ImportError:
+            logger.warning("Ignoring scene setup.")
+            scene, cameras = None, None
 
     try:
         execute_data_tasks(tasks, scene)
     except ImportError:
         pass
-    return scene, cameras
+    return scene, global_config
+
+
+def make_scene_from_data_files(render_config: typing.Union[str, None], filenames):
+
+    if render_config is not None:
+        yaml = YAML(typ="safe")
+        config = yaml.load(render_config)
+    else:
+        config = {}
+
+    tasks = {}
+    for filename in filenames:
+        tasks_from_file, config_from_file = extract_data_tasks_from_file(filename)
+        # Todo check for conflicts and abort if necessary
+        tasks.update(tasks_from_file)
+        config.update(config_from_file)
+
+    try:
+        scene = make_scene(config)
+    except ImportError:
+        logger.warning("Ignoring scene setup.")
+        scene = None
+
+    execute_data_tasks(tasks, scene)
+
+    # Todo apply config
+    try:
+        setup_system(enable_gpu_rendering=True, scene=scene)
+    except ImportError:
+        pass
+
+    return scene, config
+
+
+@needs_bpy_bmesh()
+def render_scene(*, bpy):
+    bpy.ops.render.render(write_still=True)
 
 
 @click.command(
@@ -43,15 +86,12 @@ def process_file(filename: str):
 @click.option("--background/--no-background", required=False)
 @click.option("--render_config", default=None)
 @click.argument("filenames", type=click.Path(exists=True), nargs=-1)
-def render(python, background, render_config, filenames):
+def render(python, background, render_config: typing.Union[str, None], filenames):
     """
 
     """
-    for filename in filenames:
-        scene, cameras = process_file(filename)
+    scene, config = make_scene_from_data_files(render_config, filenames)
+    add_cameras_default(scene)
 
-        # Todo read and apply render config
-        try:
-            setup_system(enable_gpu_rendering=True, scene=scene)
-        except ImportError:
-            pass
+    scene.render.filepath = "/tmp/test.png"
+    render_scene()

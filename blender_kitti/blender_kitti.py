@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-""""""
+"""
+
+"""
 import typing
 import logging
 import re
@@ -23,6 +25,10 @@ handler.setFormatter(formatter)
 handler.setLevel(logging.INFO)
 logger.addHandler(handler)
 
+"""
+TYPE+INSTANCE_NAME+ARG_NAME
+e.g. 'point_cloud+some_name+points
+"""
 regex_key = re.compile(r"(.+)\+(.+)\+(.+)")
 
 global_config_key = "config"
@@ -73,22 +79,21 @@ def make_scene(config: typing.Union[typing.Dict[str, typing.Any], None] = None):
     if "sample_id" in config:
         scene_name = config["sample_id"]
 
-    scene, cameras = setup_scene(
+    scene = setup_scene(
         name=scene_name, use_background_image=use_background_image
     )
-
     scene_maker(scene, config)
-    return scene, cameras
+    return scene
 
 
-def extract_config_from_data(data):
+def extract_config_from_data(data) -> dict:
     try:
         conf = data[global_config_key]
         conf = bytes(conf).decode("utf-8")
         yaml = YAML(typ="safe")
         return yaml.load(conf)
     except KeyError:
-        return None
+        return {}
 
 
 def extract_data_tasks_from_file(
@@ -97,7 +102,7 @@ def extract_data_tasks_from_file(
     logger.info("Processing data file '{}'.".format(filepath))
     data = np.load(filepath)
 
-    config = extract_config_from_data(data)
+    global_config = extract_config_from_data(data)
 
     def filter_fn(x):
         if x[1] is None and x[0] != global_config_key:
@@ -134,4 +139,4 @@ def extract_data_tasks_from_file(
         return task
 
     tasks = {k: m(v) for k, v in tasks.items()}
-    return tasks, config
+    return tasks, global_config

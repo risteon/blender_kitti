@@ -136,7 +136,7 @@ def add_cameras_default(scene):
     return cam_main, cam_top
 
 
-@needs_bpy_bmesh(default_return=(None, []))
+@needs_bpy_bmesh(default_return=None)
 def setup_scene(name: str = "blender_kitti", use_background_image: bool = True, *, bpy):
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
