@@ -26,10 +26,14 @@ handler.setLevel(logging.INFO)
 logger.addHandler(handler)
 
 """
-TYPE+INSTANCE_NAME+ARG_NAME
+TYPE+INSTANCE_NAME+ARG_NAME/OPTIONAL_DICT_KEY
 e.g. 'point_cloud+some_name+points
+e.g. 'mesh+some_name+vertices
+e.g. 'mesh+some_name+vertex_colors/semantics
 """
-regex_key = re.compile(r"(.+)\+(.+)\+(.+)")
+regex_key = re.compile(
+    r"([a-zA-Z0-9_-]+)\+([a-zA-Z0-9_-]+)\+([a-zA-Z0-9_-]+)(?:\/([a-zA-Z0-9_-]+))?"
+)
 
 global_config_key = "config"
 data_structures = {
@@ -79,9 +83,7 @@ def make_scene(config: typing.Union[typing.Dict[str, typing.Any], None] = None):
     if "sample_id" in config:
         scene_name = config["sample_id"]
 
-    scene = setup_scene(
-        name=scene_name, use_background_image=use_background_image
-    )
+    scene = setup_scene(name=scene_name, use_background_image=use_background_image)
     scene_maker(scene, config)
     return scene
 
@@ -112,11 +114,19 @@ def extract_data_tasks_from_file(
     matches = [(x, regex_key.fullmatch(x)) for x in data.keys()]
     matches = list(filter(filter_fn, matches))
     matches = [(data[x[0]], x[1].groups()) for x in matches]
-    matches = [((x[1][0], x[1][1], x[1][2]), x[0]) for x in matches]
 
     x = data_tree
-    for key, d in matches:
-        x[key[0]][key[1]][key[2]] = d
+    for d, key in matches:
+        if key[3] is None:
+            x[key[0]][key[1]][key[2]] = d
+        else:
+            try:
+                arg_dict = x[key[0]][key[1]][key[2]]
+            except KeyError:
+                arg_dict = {}
+                x[key[0]][key[1]][key[2]] = arg_dict
+
+            arg_dict[key[3]] = d
 
     tasks = {}
     for data_type, instances in x.items():

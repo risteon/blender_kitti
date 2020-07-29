@@ -10,7 +10,7 @@ from .material_shader import create_vertex_color_material
 def create_mesh(
     vertices: np.ndarray,
     triangles: np.ndarray,
-    vertex_colors: [np.ndarray] = (),
+    vertex_colors: {str: np.ndarray} = None,
     *,
     name: str,
     bpy,
@@ -46,13 +46,29 @@ def create_mesh(
     mesh.polygons.foreach_set("loop_start", loop_start)
     mesh.polygons.foreach_set("loop_total", loop_total)
 
-    # Create vertex color layer and set values
-    # Todo
-    # vcol_lay = mesh.vertex_colors.new(name="color_sem")
-    # vcol_lay.data.foreach_set("color", vertex_colors)
-    #
-    # vcol_grad = mesh.vertex_colors.new(name="color_grads")
-    # vcol_grad.data.foreach_set("color", mesh_vertex_color)
+    # Create vertex color layers and set values
+    if vertex_colors is not None:
+        for vcolor_name, vcolors in vertex_colors.items():
+            if (
+                vcolors.dtype != np.uint8
+                or vcolors.ndim != 2
+                or vcolors.shape[-1] not in [3, 4]
+            ):
+                raise ValueError("Need vertex colors in RGB (0-255) uint8 format.")
+
+            vcolors = vcolors.astype(np.float32) / 255.0
+            if vcolors.shape[-1] == 3:
+                vcolors = np.concatenate(
+                    (vcolors, np.ones_like(vcolors[:, :1])), axis=-1
+                )
+
+            # replicate vertex colors for each triangle at a vertex
+            vcolors = vcolors[vertex_index]
+            vcolors = vcolors.reshape([-1])
+            assert vcolors.shape[0] == 4 * num_vertex_indices
+
+            vcol_lay = mesh.vertex_colors.new(name="vcolor_{}".format(vcolor_name))
+            vcol_lay.data.foreach_set("color", vcolors)
 
     mesh.update()
     mesh.validate()
@@ -87,7 +103,7 @@ def create_obj_from_mesh(
     mat, selector = create_vertex_color_material(
         vertex_color_layer_names,
         default_color,
-        mode='select',
+        mode="select",
         name_material="{}_material".format(name_prefix),
     )
 

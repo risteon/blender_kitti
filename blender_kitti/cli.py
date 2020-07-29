@@ -51,6 +51,10 @@ def make_scene_from_data_files(render_config: typing.Union[str, None], filenames
         config = {}
 
     tasks = {}
+
+    if isinstance(filenames, str):
+        filenames = [filenames]
+
     for filename in filenames:
         tasks_from_file, config_from_file = extract_data_tasks_from_file(filename)
         # Todo check for conflicts and abort if necessary
