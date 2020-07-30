@@ -10,7 +10,7 @@ import typing
 
 from ruamel.yaml import YAML
 
-from .blender_kitti import execute_data_tasks, make_scene, extract_data_tasks_from_file
+from .blender_kitti import add_objects_from_data, make_scene, extract_data_tasks_from_file
 from .system_setup import setup_system
 from .scene_setup import add_cameras_default
 from .bpy_helper import needs_bpy_bmesh
@@ -36,7 +36,7 @@ def process_file(filename: str, scene=None):
             scene, cameras = None, None
 
     try:
-        execute_data_tasks(tasks, scene)
+        add_objects_from_data(tasks, scene)
     except ImportError:
         pass
     return scene, global_config
@@ -67,7 +67,12 @@ def make_scene_from_data_files(render_config: typing.Union[str, None], filenames
         logger.warning("Ignoring scene setup.")
         scene = None
 
-    execute_data_tasks(tasks, scene)
+    if "whitelist" in config:
+        # only keep the instances that are in the whitelist
+        instance_whitelist = set(config["whitelist"])
+        tasks = dict((k, v) for k, v in tasks.items() if k in instance_whitelist)
+
+    add_objects_from_data(tasks, scene)
 
     # Todo apply config
     try:

@@ -44,7 +44,7 @@ data_structures = {
 data_tree = defaultdict(lambda: defaultdict(dict))
 
 
-def execute_data_tasks(tasks: {str: typing.Any}, scene):
+def add_objects_from_data(tasks: {str: typing.Any}, scene):
 
     for instance_name, (task_f, task_kwargs) in tasks.items():
         if "scene" not in task_kwargs:
