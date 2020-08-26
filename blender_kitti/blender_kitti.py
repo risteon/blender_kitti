@@ -52,7 +52,13 @@ def add_objects_from_data(tasks: {str: typing.Any}, scene):
         try:
             task_f(**task_kwargs)
         except ImportError:
-            logger.warning("Ignoring task.")
+            logger.warning(
+                "Imports for '{}' unavailable. Ignoring task.".format(instance_name)
+            )
+        except TypeError as e:
+            logger.warning(
+                "Wrong data format for '{}': {}".format(instance_name, str(e))
+            )
 
 
 def make_scene_single_object(scene, _config):
