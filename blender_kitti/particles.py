@@ -187,6 +187,49 @@ def add_voxels(
 
 
 @needs_bpy_bmesh()
+def add_voxel_list(
+    indices: np.ndarray,
+    grid_shape: np.ndarray,
+    grid_origin: np.ndarray,
+    voxel_size: np.ndarray,
+    colors: np.ndarray = None,
+    name_prefix: str = "voxel_list",
+    scene=None,
+    *,
+    bpy
+):
+    """
+
+    """
+    assert indices.ndim == 1
+    assert grid_shape.ndim == 1
+    assert indices.shape[0] == colors.shape[0]
+
+    dtype = np.float32
+    # cubic voxels
+    deltas = np.repeat(voxel_size, 3)
+
+    coords = np.mgrid[[slice(x) for x in grid_shape]].astype(dtype)
+    coords = np.moveaxis(coords, 0, 3)
+    coords *= deltas
+    coords += grid_origin
+
+    mask = np.zeros(shape=grid_shape, dtype=np.bool)
+    mask.reshape([-1])[indices] = True
+
+    coords = coords[mask]
+
+    # Todo replace with non-ops calls to create object
+    bpy.ops.mesh.primitive_cube_add(size=0.16, enter_editmode=False, location=(0, 0, 0))
+    obj_particle = bpy.context.selected_objects[0]
+
+    obj_voxels = _create_particle_instancer(name_prefix, coords, colors, obj_particle)
+    if scene is not None:
+        scene.collection.objects.link(obj_voxels)
+    return obj_voxels
+
+
+@needs_bpy_bmesh()
 def add_point_cloud(
     points: np.ndarray,
     colors: np.ndarray = None,

@@ -83,7 +83,7 @@ def make_scene_from_data_files(render_config: typing.Union[str, None], filenames
     return scene, config
 
 
-@needs_bpy_bmesh()
+@needs_bpy_bmesh(default_return=None)
 def render_scene(*, bpy):
     bpy.ops.render.render(write_still=True)
 

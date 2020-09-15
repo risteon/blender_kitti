@@ -10,7 +10,7 @@ import numpy as np
 from collections import defaultdict
 from ruamel.yaml import YAML
 
-from .particles import add_point_cloud, add_voxels
+from .particles import add_point_cloud, add_voxels, add_voxel_list
 from .mesh import add_object_from_mesh
 from .scene_setup import setup_scene
 from .object_spotlight import add_spotlight_ground
@@ -39,6 +39,7 @@ global_config_key = "config"
 data_structures = {
     "point_cloud": add_point_cloud,
     "voxels": add_voxels,
+    "voxel_list": add_voxel_list,
     "mesh": add_object_from_mesh,
 }
 data_tree = defaultdict(lambda: defaultdict(dict))
