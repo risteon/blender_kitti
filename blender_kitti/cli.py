@@ -7,10 +7,15 @@
 import click
 import logging
 import typing
+import pathlib
 
 from ruamel.yaml import YAML
 
-from .blender_kitti import add_objects_from_data, make_scene, extract_data_tasks_from_file
+from .blender_kitti import (
+    add_objects_from_data,
+    make_scene,
+    extract_data_tasks_from_file,
+)
 from .system_setup import setup_system
 from .scene_setup import add_cameras_default
 from .bpy_helper import needs_bpy_bmesh
@@ -30,7 +35,9 @@ def process_file(filename: str, scene=None):
     tasks, global_config = extract_data_tasks_from_file(filename)
     if scene is None:
         try:
-            scene = make_scene(global_config)
+            scene = make_scene(
+                global_config, fallback_scene_name=pathlib.Path(filename).stem
+            )
         except ImportError:
             logger.warning("Ignoring scene setup.")
             scene, cameras = None, None

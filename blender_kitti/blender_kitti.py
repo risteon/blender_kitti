@@ -5,6 +5,8 @@
 import typing
 import logging
 import re
+import pathlib
+
 import numpy as np
 
 from collections import defaultdict
@@ -66,18 +68,22 @@ def make_scene_single_object(scene, _config):
     add_spotlight_ground(scene)
 
 
-def make_scene(config: typing.Union[typing.Dict[str, typing.Any], None] = None):
+def make_scene(
+    config: typing.Union[typing.Dict[str, typing.Any], None] = None,
+    *,
+    fallback_scene_name: str = "blender_kitti_default"
+):
     if config is None:
         config = {}
 
     # Todo some kind of default?
     use_background_image = True
-    scene_name = "blender_kitti"
+    scene_name = fallback_scene_name
 
-    def dummy(_scene, _config):
+    def placeholder(_scene, _config):
         pass
 
-    scene_maker = dummy
+    scene_maker = placeholder
 
     if "scene_setup" in config:
         scene_mode = config["scene_setup"]
@@ -87,8 +93,8 @@ def make_scene(config: typing.Union[typing.Dict[str, typing.Any], None] = None):
         else:
             raise NotImplementedError()
 
-    if "sample_id" in config:
-        scene_name = config["sample_id"]
+    if "scene_name" in config:
+        scene_name = config["scene_name"]
 
     scene = setup_scene(name=scene_name, use_background_image=use_background_image)
     scene_maker(scene, config)
@@ -135,12 +141,23 @@ def extract_data_tasks_from_file(
 
             arg_dict[key[3]] = d
 
+    try:
+        file_desc = global_config["file_desc"]
+    except KeyError:
+        file_desc = pathlib.Path(filepath).stem
+
     tasks = {}
     for data_type, instances in x.items():
         try:
             f = data_structures[data_type]
+
+            instance_names = {k: "{}_{}".format(file_desc, k) for k in instances.keys()}
+
             tasks.update(
-                {k: (f, {"name_prefix": k, **v}) for k, v in instances.items()}
+                {
+                    instance_names[k]: (f, {"name_prefix": instance_names[k], **v})
+                    for k, v in instances.items()
+                }
             )
 
         except KeyError:

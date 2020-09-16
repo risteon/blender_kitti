@@ -21,7 +21,10 @@ def clear_all(*, bpy):
 
 
 @needs_bpy_bmesh()
-def add_light_source(*, bpy):
+def add_light_source(scene, *, bpy):
+
+    raise NotImplementedError("Implement: Add lights to given scene.")
+
     bpy.ops.mesh.primitive_plane_add()
     scene_light = bpy.context.selected_objects[0]
     scene_light.name = "SceneLight"
@@ -56,7 +59,7 @@ def add_light_source(*, bpy):
 
 
 @needs_bpy_bmesh()
-def add_hdr_background(*, bpy):
+def create_world_with_hdr_background(name: str = "world_hdr", *, bpy):
     hdr_filepath = (
         pathlib.Path(__file__).parent.parent / "assets" / "ruckenkreuz_2k.hdr"
     )
@@ -66,7 +69,8 @@ def add_hdr_background(*, bpy):
         )
     background_image = bpy.data.images.load(str(hdr_filepath), check_existing=False)
 
-    world = bpy.data.worlds["World"]
+    world = bpy.data.worlds.new(name)
+    world.use_nodes = True
     nodes = world.node_tree.nodes
     nodes.clear()
 
@@ -84,6 +88,7 @@ def add_hdr_background(*, bpy):
     links = world.node_tree.links
     links.new(node_tex_env.outputs[0], node_background.inputs[0])
     links.new(node_background.outputs[0], node_output.inputs[0])
+    return world
 
 
 @needs_bpy_bmesh()
@@ -138,15 +143,14 @@ def add_cameras_default(scene):
 
 @needs_bpy_bmesh(default_return=None)
 def setup_scene(name: str = "blender_kitti", use_background_image: bool = True, *, bpy):
-    scene = bpy.context.scene
+    scene = bpy.data.scenes.new(name)
     scene.render.engine = "CYCLES"
-    scene.name = name
     scene.render.film_transparent = True
 
-    clear_all()
+    # clear_all()
 
     if use_background_image:
-        add_hdr_background()
+        scene.world = create_world_with_hdr_background()
     else:
-        add_light_source()
+        add_light_source(scene)
     return scene

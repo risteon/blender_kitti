@@ -121,10 +121,10 @@ def _create_particle_instancer(
     obj_particle,
 ):
     # created entities
-    name_mesh = "mesh_{}".format(name_prefix)
-    name_obj = "obj_instancer_{}".format(name_prefix)
-    name_image = "colors_{}".format(name_prefix)
-    name_material = "material_{}".format(name_prefix)
+    name_mesh = "{}_mesh".format(name_prefix)
+    name_obj = "{}_obj_instancer".format(name_prefix)
+    name_image = "{}_colors".format(name_prefix)
+    name_material = "{}_material".format(name_prefix)
 
     obj_instancer = _create_instancer_obj(positions, name_obj, name_mesh)
 
@@ -147,13 +147,39 @@ def _create_particle_instancer(
 
 
 @needs_bpy_bmesh()
+def create_cube(name_prefix: str, *, edge_length: float = 0.16, bpy, bmesh):
+
+    bm = bmesh.new()
+    bmesh.ops.create_cube(
+        bm, size=edge_length, calc_uvs=False,
+    )
+
+    me = bpy.data.meshes.new("{}_mesh".format(name_prefix))
+    bm.to_mesh(me)
+    bm.free()
+
+    obj = bpy.data.objects.new("{}_obj".format(name_prefix), me)
+    return obj
+
+
+def create_voxel_particle_obj(
+    coords: np.ndarray, colors: np.ndarray, name_prefix: str, scene
+):
+    obj_particle = create_cube(name_prefix + "_cube")
+    scene.collection.objects.link(obj_particle)
+
+    obj_voxels = _create_particle_instancer(name_prefix, coords, colors, obj_particle)
+    if scene is not None:
+        scene.collection.objects.link(obj_voxels)
+    return obj_voxels
+
+
 def add_voxels(
+    *,
     voxels: np.ndarray,
     colors: np.ndarray = None,
     name_prefix: str = "voxels",
-    scene=None,
-    *,
-    bpy
+    scene,
 ):
     """
 
@@ -161,7 +187,6 @@ def add_voxels(
     :param colors:
     :param name_prefix:
     :param scene:
-    :param bpy:
     :return:
     """
     assert voxels.ndim == 3
@@ -176,27 +201,18 @@ def add_voxels(
     coords = coords[voxels]
     colors = colors[voxels]
 
-    # Todo replace with non-ops calls to create object
-    bpy.ops.mesh.primitive_cube_add(size=0.16, enter_editmode=False, location=(0, 0, 0))
-    obj_particle = bpy.context.selected_objects[0]
-
-    obj_voxels = _create_particle_instancer(name_prefix, coords, colors, obj_particle)
-    if scene is not None:
-        scene.collection.objects.link(obj_voxels)
-    return obj_voxels
+    return create_voxel_particle_obj(coords, colors, name_prefix, scene)
 
 
-@needs_bpy_bmesh()
 def add_voxel_list(
+    *,
     indices: np.ndarray,
     grid_shape: np.ndarray,
     grid_origin: np.ndarray,
     voxel_size: np.ndarray,
     colors: np.ndarray = None,
     name_prefix: str = "voxel_list",
-    scene=None,
-    *,
-    bpy
+    scene,
 ):
     """
 
@@ -219,14 +235,7 @@ def add_voxel_list(
 
     coords = coords[mask]
 
-    # Todo replace with non-ops calls to create object
-    bpy.ops.mesh.primitive_cube_add(size=0.16, enter_editmode=False, location=(0, 0, 0))
-    obj_particle = bpy.context.selected_objects[0]
-
-    obj_voxels = _create_particle_instancer(name_prefix, coords, colors, obj_particle)
-    if scene is not None:
-        scene.collection.objects.link(obj_voxels)
-    return obj_voxels
+    return create_voxel_particle_obj(coords, colors, name_prefix, scene)
 
 
 @needs_bpy_bmesh()
@@ -237,7 +246,7 @@ def add_point_cloud(
     name_prefix: str = "point_cloud",
     scene=None,
     *,
-    bpy
+    bpy,
 ):
     # created entities
     # Todo replace with non-ops calls to create object
