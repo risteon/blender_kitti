@@ -111,6 +111,9 @@ def _create_color_image(colors_rgba: np.ndarray, name: str, *, bpy):
 
     colors_rgba = colors_rgba.reshape((-1))
     image.pixels = [a for a in colors_rgba]
+    # super important. Otherwise the pixel data will just vanish from memory and be
+    # lost for certain after saving + loading the file.
+    image.pack()
     return image
 
 
@@ -230,10 +233,8 @@ def add_voxel_list(
     coords *= deltas
     coords += grid_origin
 
-    mask = np.zeros(shape=grid_shape, dtype=np.bool)
-    mask.reshape([-1])[indices] = True
-
-    coords = coords[mask]
+    coords = coords.reshape([-1, 3])
+    coords = coords[indices]
 
     return create_voxel_particle_obj(coords, colors, name_prefix, scene)
 
