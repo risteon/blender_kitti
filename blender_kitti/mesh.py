@@ -119,8 +119,8 @@ def create_obj_from_mesh(
 ):
 
     obj_name = "{}_obj".format(name_prefix)
-    # if obj_name in bpy.data.objects:
-    #     raise RuntimeError("Obj '{}' already exists.".format(obj_name))
+    if obj_name in bpy.data.objects:
+        raise RuntimeError("Obj '{}' already exists.".format(obj_name))
 
     mesh = create_mesh(
         vertices,

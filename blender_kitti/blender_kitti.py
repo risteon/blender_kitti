@@ -155,7 +155,7 @@ def extract_data_tasks_from_file(
 
             tasks.update(
                 {
-                    instance_names[k]: (f, {"name_prefix": instance_names[k], **v})
+                    k: (f, {"name_prefix": instance_names[k], **v})
                     for k, v in instances.items()
                 }
             )
