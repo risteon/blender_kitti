@@ -74,14 +74,21 @@ def make_scene_single_object(scene, _config):
 def make_scene(
     config: typing.Union[typing.Dict[str, typing.Any], None] = None,
     *,
-    fallback_scene_name: str = "blender_kitti_default"
+    fallback_scene_name=None
 ):
     if config is None:
         config = {}
 
     # Todo some kind of default?
     use_background_image = True
-    scene_name = fallback_scene_name
+
+    if fallback_scene_name is None:
+        try:
+            scene_name = config["file_desc"]
+        except KeyError:
+            scene_name = "blender_kitti_default"
+    else:
+        scene_name = fallback_scene_name
 
     def placeholder(_scene, _config):
         pass
@@ -148,6 +155,7 @@ def extract_data_tasks_from_file(
         file_desc = global_config["file_desc"]
     except KeyError:
         file_desc = pathlib.Path(filepath).stem
+        global_config["file_desc"] = file_desc
 
     tasks = {}
     for data_type, instances in x.items():

@@ -35,9 +35,7 @@ def process_file(filename: str, scene=None):
     tasks, global_config = extract_data_tasks_from_file(filename)
     if scene is None:
         try:
-            scene = make_scene(
-                global_config, fallback_scene_name=pathlib.Path(filename).stem
-            )
+            scene = make_scene(global_config)
         except ImportError:
             logger.warning("Ignoring scene setup.")
             scene, cameras = None, None
