@@ -265,9 +265,10 @@ def add_point_cloud(
     row_splits: np.ndarray = None,
     name_prefix: str = "point_cloud",
     scene,
+    particle_radius: float = 0.02,
 ):
     # created entities
-    obj_particle = create_icosphere(name_prefix + "_icosphere")
+    obj_particle = create_icosphere(name_prefix + "_icosphere", radius=particle_radius)
     scene.collection.objects.link(obj_particle)
 
     obj_point_cloud = _create_particle_instancer(
