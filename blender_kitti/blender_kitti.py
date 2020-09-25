@@ -49,11 +49,12 @@ data_tree = defaultdict(lambda: defaultdict(dict))
 
 def add_objects_from_data(tasks: {str: typing.Any}, scene):
 
+    results = {}
     for instance_name, (task_f, task_kwargs) in tasks.items():
         if "scene" not in task_kwargs:
             task_kwargs["scene"] = scene
         try:
-            task_f(**task_kwargs)
+            results[instance_name] = task_f(**task_kwargs)
         except ImportError:
             logger.warning(
                 "Imports for '{}' unavailable. Ignoring task.".format(instance_name)
@@ -62,6 +63,8 @@ def add_objects_from_data(tasks: {str: typing.Any}, scene):
             logger.warning(
                 "Wrong data format for '{}': {}".format(instance_name, str(e))
             )
+
+    return results
 
 
 def make_scene_single_object(scene, _config):

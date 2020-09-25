@@ -63,7 +63,7 @@ def render_kitti_point_cloud(gpu_compute=False):
         scene.cycles.device = "CPU"
 
     point_cloud, color = get_semantic_kitti_point_cloud()
-    _ = add_point_cloud(point_cloud, color, scene=scene)
+    _ = add_point_cloud(pointcloud=point_cloud, colors=color, scene=scene)
     render(scene, cameras, "/tmp/blender_kitti_render_point_cloud_{}.png")
 
 

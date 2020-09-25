@@ -165,6 +165,24 @@ def create_cube(name_prefix: str, *, edge_length: float = 0.16, bpy, bmesh):
     return obj
 
 
+@needs_bpy_bmesh()
+def create_icosphere(
+    name_prefix: str, *, subdivisions: int = 3, radius: float = 0.02, bpy, bmesh
+):
+
+    bm = bmesh.new()
+    bmesh.ops.create_icosphere(
+        bm, subdivisions=subdivisions, diameter=2.0 * radius, calc_uvs=False,
+    )
+
+    me = bpy.data.meshes.new("{}_mesh".format(name_prefix))
+    bm.to_mesh(me)
+    bm.free()
+
+    obj = bpy.data.objects.new("{}_obj".format(name_prefix), me)
+    return obj
+
+
 def create_voxel_particle_obj(
     coords: np.ndarray, colors: np.ndarray, name_prefix: str, scene
 ):
@@ -204,7 +222,7 @@ def add_voxels(
     coords = coords[voxels]
     colors = colors[voxels]
 
-    return create_voxel_particle_obj(coords, colors, name_prefix, scene)
+    return create_voxel_particle_obj(coords, colors, name_prefix, scene), {}
 
 
 def add_voxel_list(
@@ -236,30 +254,25 @@ def add_voxel_list(
     coords = coords.reshape([-1, 3])
     coords = coords[indices]
 
-    return create_voxel_particle_obj(coords, colors, name_prefix, scene)
+    return create_voxel_particle_obj(coords, colors, name_prefix, scene), {}
 
 
-@needs_bpy_bmesh()
 def add_point_cloud(
+    *,
     points: np.ndarray,
     colors: np.ndarray = None,
+    reflectivity: np.ndarray = None,
     row_splits: np.ndarray = None,
     name_prefix: str = "point_cloud",
-    scene=None,
-    *,
-    bpy,
+    scene,
 ):
     # created entities
-    # Todo replace with non-ops calls to create object
-    bpy.ops.mesh.primitive_ico_sphere_add(
-        subdivisions=3, radius=0.02, enter_editmode=False, location=(0, 0, 0)
-    )
-    obj_particle = bpy.context.selected_objects[0]
+    obj_particle = create_icosphere(name_prefix + "_icosphere")
+    scene.collection.objects.link(obj_particle)
 
     obj_point_cloud = _create_particle_instancer(
         name_prefix, points, colors, obj_particle
     )
 
-    if scene is not None:
-        scene.collection.objects.link(obj_point_cloud)
-    return obj_point_cloud
+    scene.collection.objects.link(obj_point_cloud)
+    return obj_point_cloud, {}

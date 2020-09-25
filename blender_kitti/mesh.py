@@ -130,15 +130,10 @@ def create_obj_from_mesh(
         name="{}_mesh".format(name_prefix),
     )
     obj = bpy.data.objects.new(obj_name, mesh)
-
-    if vertex_colors is None:
-        vertex_color_layer_names = []
-    else:
-        vertex_color_layer_names = list(vertex_colors.keys())
-
+    print(list(mesh.vertex_colors.keys()))
     default_color = 0.0, 0.0, 0.0, 1.0  # black
-    mat, selector = create_vertex_color_material(
-        vertex_color_layer_names,
+    mat, select_vertex_color = create_vertex_color_material(
+        list(mesh.vertex_colors.keys()),
         default_color,
         mode="select",
         name_material="{}_material".format(name_prefix),
@@ -146,12 +141,12 @@ def create_obj_from_mesh(
 
     # Todo: handle multiple vertex color layers
     if vertex_colors is None:
-        selector(-1)
+        select_vertex_color(-1)
     else:
-        selector(0)
+        select_vertex_color(0)
 
     obj.data.materials.append(mat)
-    return obj
+    return obj, select_vertex_color
 
 
 def add_object_from_mesh(
@@ -163,7 +158,9 @@ def add_object_from_mesh(
     scene,
     name_prefix: str,
 ):
-    obj = create_obj_from_mesh(
+    obj, select_vertex_color = create_obj_from_mesh(
         vertices, triangles, vertex_colors, face_colors, name_prefix=name_prefix
     )
+
     scene.collection.objects.link(obj)
+    return obj, {"vertex_color_selector": select_vertex_color}

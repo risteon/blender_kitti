@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """"""
+import typing
+
 from .bpy_helper import needs_bpy_bmesh
 
 
@@ -131,14 +133,20 @@ def make_nodes_vertex_color_material(
 
         links.new(node_vertex_color.outputs[0], node_color.inputs[1])
 
-        def selector(index: int):
-            if index < 0:
-                # set to default color
-                node_color.inputs[0].default_value = 1.0
-                return
+        def selector(desc: typing.Union[int, str]):
+            if isinstance(desc, int):
+                if desc < 0:
+                    # set to default color
+                    node_color.inputs[0].default_value = 1.0
+                    return
+                else:
+                    node_color.inputs[0].default_value = 0.0
+                    node_vertex_color.attribute_name = vertex_color_layer_names[desc]
             else:
+                if desc not in vertex_color_layer_names:
+                    raise ValueError("Vertex color names not found.")
                 node_color.inputs[0].default_value = 0.0
-                node_vertex_color.attribute_name = vertex_color_layer_names[index]
+                node_vertex_color.attribute_name = desc
 
     # create shader node
     node_bsdf = nodes.new(type="ShaderNodeBsdfPrincipled")
