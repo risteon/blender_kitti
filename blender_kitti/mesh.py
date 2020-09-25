@@ -135,7 +135,7 @@ def create_obj_from_mesh(
         name="{}_mesh".format(name_prefix),
     )
     obj = bpy.data.objects.new(obj_name, mesh)
-    print(list(mesh.vertex_colors.keys()))
+
     default_color = 0.0, 0.0, 0.0, 1.0  # black
     mat, select_vertex_color = create_vertex_color_material(
         list(mesh.vertex_colors.keys()),
