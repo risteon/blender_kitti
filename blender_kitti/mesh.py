@@ -12,6 +12,7 @@ def create_mesh(
     triangles: np.ndarray,
     vertex_colors: {str: np.ndarray} = None,
     face_colors: {str: np.ndarray} = None,
+    use_smooth: bool = True,
     *,
     name: str,
     bpy,
@@ -46,6 +47,10 @@ def create_mesh(
     mesh.polygons.add(num_loops)
     mesh.polygons.foreach_set("loop_start", loop_start)
     mesh.polygons.foreach_set("loop_total", loop_total)
+    mesh.polygons.foreach_set(
+        "use_smooth",
+        np.full(fill_value=use_smooth, shape=[len(mesh.polygons)], dtype=np.bool),
+    )
 
     # Create vertex color layers and set values
     if vertex_colors is not None:
