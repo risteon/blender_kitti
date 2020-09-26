@@ -134,9 +134,9 @@ def _create_particle_instancer(
     if colors is not None:
         image = _create_color_image(colors, name_image)
         # the particle obj will use this material
-        material = create_uv_mapped_material(image, name_material)
+        material, color_selector = create_uv_mapped_material(image, name_material)
     else:
-        material = create_simple_material(
+        material, color_selector = create_simple_material(
             base_color=(0.1, 0.1, 0.1, 1.0), name_material=name_material
         )
 
@@ -146,7 +146,7 @@ def _create_particle_instancer(
     obj_instancer.show_instancer_for_render = False
 
     obj_particle.data.materials.append(material)
-    return obj_instancer
+    return obj_instancer, color_selector
 
 
 @needs_bpy_bmesh()
@@ -189,10 +189,12 @@ def create_voxel_particle_obj(
     obj_particle = create_cube(name_prefix + "_cube")
     scene.collection.objects.link(obj_particle)
 
-    obj_voxels = _create_particle_instancer(name_prefix, coords, colors, obj_particle)
+    obj_voxels, color_selector = _create_particle_instancer(
+        name_prefix, coords, colors, obj_particle
+    )
     if scene is not None:
         scene.collection.objects.link(obj_voxels)
-    return obj_voxels
+    return obj_voxels, color_selector
 
 
 def add_voxels(
@@ -222,7 +224,10 @@ def add_voxels(
     coords = coords[voxels]
     colors = colors[voxels]
 
-    return create_voxel_particle_obj(coords, colors, name_prefix, scene), {}
+    obj_voxels, color_selector = create_voxel_particle_obj(
+        coords, colors, name_prefix, scene
+    )
+    return obj_voxels, {"color_selector": color_selector}
 
 
 def add_voxel_list(
@@ -254,7 +259,10 @@ def add_voxel_list(
     coords = coords.reshape([-1, 3])
     coords = coords[indices]
 
-    return create_voxel_particle_obj(coords, colors, name_prefix, scene), {}
+    obj_voxels, color_selector = create_voxel_particle_obj(
+        coords, colors, name_prefix, scene
+    )
+    return obj_voxels, {"color_selector": color_selector}
 
 
 def add_point_cloud(
@@ -271,9 +279,9 @@ def add_point_cloud(
     obj_particle = create_icosphere(name_prefix + "_icosphere", radius=particle_radius)
     scene.collection.objects.link(obj_particle)
 
-    obj_point_cloud = _create_particle_instancer(
+    obj_point_cloud, color_selector = _create_particle_instancer(
         name_prefix, points, colors, obj_particle
     )
 
     scene.collection.objects.link(obj_point_cloud)
-    return obj_point_cloud, {}
+    return obj_point_cloud, {"color_selector": color_selector}

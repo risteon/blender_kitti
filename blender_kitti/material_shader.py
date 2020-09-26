@@ -5,24 +5,63 @@ import typing
 from .bpy_helper import needs_bpy_bmesh
 
 
+class NodeRGBColorSelect:
+
+    COLOR_BLACK = (0.0, 0.0, 0.0, 1.0)
+    VALUES = {
+        "input": 0.0,
+        "default": 1.0,
+        "mix": 0.5,
+    }
+
+    def __init__(
+        self, nodes, *, default_color=COLOR_BLACK, location=(1200, 0)
+    ):
+        self.node = nodes.new(type="ShaderNodeMixRGB")
+        self.node.location = location
+        self.node.inputs[1].default_value = NodeRGBColorSelect.COLOR_BLACK
+        self.node.inputs[2].default_value = default_color
+
+        self.set("input")
+
+    @property
+    def color_input(self):
+        return self.node.inputs[1]
+
+    @property
+    def color_output(self):
+        return self.node.outputs[0]
+
+    def set(self, value: typing.Union[float, str]):
+        if isinstance(value, str):
+            self.node.inputs[0].default_value = NodeRGBColorSelect.VALUES[value]
+        else:
+            self.node.inputs[0].default_value = value
+
+
 def make_nodes_simple_material(material, base_color):
     material.use_nodes = True
     nodes = material.node_tree.nodes
     nodes.clear()
 
+    # mix point colors with black RGB color
+    node_mix_rgb = NodeRGBColorSelect(nodes, default_color=base_color, location=(0, 0))
+
     node_bsdf = nodes.new(type="ShaderNodeBsdfPrincipled")
-    node_bsdf.inputs[0].default_value = base_color
     node_bsdf.inputs[7].default_value = 0.65  # roughness
     node_bsdf.inputs[12].default_value = 0.0  # clearcoat
     node_bsdf.inputs[13].default_value = 0.25  # clearcoat roughness
-    node_bsdf.location = 0, 0
+    node_bsdf.location = 250, 0
 
     node_output = nodes.new(type="ShaderNodeOutputMaterial")
-    node_output.location = 400, 0
+    node_output.location = 600, 0
 
     # link nodes
     links = material.node_tree.links
+    links.new(node_mix_rgb.color_output, node_bsdf.inputs[0])
     links.new(node_bsdf.outputs[0], node_output.inputs[0])
+
+    return node_mix_rgb
 
 
 def make_nodes_uv_mapped_material(material, color_image):
@@ -61,11 +100,8 @@ def make_nodes_uv_mapped_material(material, color_image):
     node_text.image = color_image
     node_text.location = 900, 0
 
-    # mix point colors with simple black material
-    node_mix_rgb = nodes.new(type="ShaderNodeMixRGB")
-    node_mix_rgb.location = 1200, 0
-    node_mix_rgb.inputs[0].default_value = 0.0  # all on vertex color
-    node_mix_rgb.inputs[2].default_value = (0.01, 0.01, 0.01, 1.0)
+    # mix point colors with black RGB color
+    node_mix_rgb = NodeRGBColorSelect(nodes)
 
     # create shader node
     node_bsdf = nodes.new(type="ShaderNodeBsdfPrincipled")
@@ -86,9 +122,11 @@ def make_nodes_uv_mapped_material(material, color_image):
     links.new(node_div_x.outputs[0], node_comb.inputs[0])
     links.new(node_add_y.outputs[0], node_comb.inputs[1])
     links.new(node_comb.outputs[0], node_text.inputs[0])
-    links.new(node_text.outputs[0], node_mix_rgb.inputs[1])
-    links.new(node_mix_rgb.outputs[0], node_bsdf.inputs[0])
+    links.new(node_text.outputs[0], node_mix_rgb.color_input)
+    links.new(node_mix_rgb.color_output, node_bsdf.inputs[0])
     links.new(node_bsdf.outputs[0], node_output.inputs[0])
+
+    return node_mix_rgb
 
 
 def make_nodes_vertex_color_material(
@@ -175,14 +213,14 @@ def create_or_get_material(name_material: str, *, bpy):
 
 def create_simple_material(base_color, name_material: str):
     mat = create_or_get_material(name_material)
-    make_nodes_simple_material(mat, base_color)
-    return mat
+    color_selector = make_nodes_simple_material(mat, base_color)
+    return mat, color_selector
 
 
 def create_uv_mapped_material(color_image, name_material: str = "material_point_cloud"):
     mat = create_or_get_material(name_material)
-    make_nodes_uv_mapped_material(mat, color_image)
-    return mat
+    color_selector = make_nodes_uv_mapped_material(mat, color_image)
+    return mat, color_selector
 
 
 def create_vertex_color_material(
