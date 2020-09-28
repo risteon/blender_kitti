@@ -15,11 +15,16 @@ class NodeRGBColorSelect:
     }
 
     def __init__(
-        self, nodes, *, default_color=COLOR_BLACK, location=(1200, 0)
+        self,
+        nodes,
+        *,
+        default_color=COLOR_BLACK,
+        input_color=COLOR_BLACK,
+        location=(1200, 0)
     ):
         self.node = nodes.new(type="ShaderNodeMixRGB")
         self.node.location = location
-        self.node.inputs[1].default_value = NodeRGBColorSelect.COLOR_BLACK
+        self.node.inputs[1].default_value = input_color
         self.node.inputs[2].default_value = default_color
 
         self.set("input")
@@ -45,7 +50,7 @@ def make_nodes_simple_material(material, base_color):
     nodes.clear()
 
     # mix point colors with black RGB color
-    node_mix_rgb = NodeRGBColorSelect(nodes, default_color=base_color, location=(0, 0))
+    node_mix_rgb = NodeRGBColorSelect(nodes, input_color=base_color, location=(0, 0))
 
     node_bsdf = nodes.new(type="ShaderNodeBsdfPrincipled")
     node_bsdf.inputs[7].default_value = 0.65  # roughness
