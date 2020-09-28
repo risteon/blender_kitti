@@ -20,7 +20,7 @@ class NodeRGBColorSelect:
         *,
         default_color=COLOR_BLACK,
         input_color=COLOR_BLACK,
-        location=(1200, 0)
+        location=(1200, 0),
     ):
         self.node = nodes.new(type="ShaderNodeMixRGB")
         self.node.location = location
@@ -44,29 +44,83 @@ class NodeRGBColorSelect:
             self.node.inputs[0].default_value = value
 
 
+class NodeOutput:
+    """ Build a default shader/material node tree
+
+    * Select between input color (some particle mapping) and unified default color
+    * Select between principled shader output and dummy 'true'-color output
+    """
+
+    MODES = {"shader": 1.0, "truecolor": 0.0}
+
+    def __init__(
+        self,
+        node_tree,
+        *,
+        default_color=NodeRGBColorSelect.COLOR_BLACK,
+        input_color=NodeRGBColorSelect.COLOR_BLACK,
+        location=(0, 0),
+        input_color_link=None,
+    ):
+        self.base_location_x = location[0]
+        self.base_location_y = location[1]
+
+        self.node_rgb_color_select = NodeRGBColorSelect(
+            node_tree.nodes,
+            default_color=default_color,
+            input_color=input_color,
+            location=(self.base_location_x, self.base_location_y),
+        )
+
+        self.node_bsdf = node_tree.nodes.new(type="ShaderNodeBsdfPrincipled")
+        self.node_bsdf.inputs[7].default_value = 0.65  # roughness
+        self.node_bsdf.inputs[12].default_value = 0.0  # clearcoat
+        self.node_bsdf.inputs[13].default_value = 0.25  # clearcoat roughness
+        self.node_bsdf.location = self.base_location_x + 200, self.base_location_y
+
+        self.node_mix_shader = node_tree.nodes.new(type="ShaderNodeMixShader")
+        self.node_mix_shader.location = (
+            self.base_location_x + 480,
+            self.base_location_y + 70,
+        )
+        self.node_mix_shader.inputs[0].default_value = self.MODES["shader"]
+
+        self.node_output = node_tree.nodes.new(type="ShaderNodeOutputMaterial")
+        self.node_output.location = self.base_location_x + 650, self.base_location_y
+
+        # link nodes
+        links = node_tree.links
+        links.new(self.node_rgb_color_select.color_output, self.node_bsdf.inputs[0])
+        links.new(
+            self.node_rgb_color_select.color_output, self.node_mix_shader.inputs[1]
+        )
+        links.new(self.node_bsdf.outputs[0], self.node_mix_shader.inputs[2])
+        links.new(self.node_mix_shader.outputs[0], self.node_output.inputs[0])
+
+        if input_color_link is not None:
+            links.new(input_color_link, self.node_rgb_color_select.color_input)
+
+    def set(self, value: typing.Union[float, str]):
+        return self.node_rgb_color_select.set(value)
+
+    def mode(self, value: str):
+        self.node_mix_shader.inputs[0].default_value = self.MODES[value]
+
+    @property
+    def color_input(self):
+        return self.node_rgb_color_select.color_input
+
+
 def make_nodes_simple_material(material, base_color):
     material.use_nodes = True
     nodes = material.node_tree.nodes
     nodes.clear()
 
-    # mix point colors with black RGB color
-    node_mix_rgb = NodeRGBColorSelect(nodes, input_color=base_color, location=(0, 0))
+    default_output_node = NodeOutput(
+        material.node_tree, input_color=base_color, location=(0, 0)
+    )
 
-    node_bsdf = nodes.new(type="ShaderNodeBsdfPrincipled")
-    node_bsdf.inputs[7].default_value = 0.65  # roughness
-    node_bsdf.inputs[12].default_value = 0.0  # clearcoat
-    node_bsdf.inputs[13].default_value = 0.25  # clearcoat roughness
-    node_bsdf.location = 250, 0
-
-    node_output = nodes.new(type="ShaderNodeOutputMaterial")
-    node_output.location = 600, 0
-
-    # link nodes
-    links = material.node_tree.links
-    links.new(node_mix_rgb.color_output, node_bsdf.inputs[0])
-    links.new(node_bsdf.outputs[0], node_output.inputs[0])
-
-    return node_mix_rgb
+    return default_output_node
 
 
 def make_nodes_uv_mapped_material(material, color_image):
@@ -105,19 +159,6 @@ def make_nodes_uv_mapped_material(material, color_image):
     node_text.image = color_image
     node_text.location = 900, 0
 
-    # mix point colors with black RGB color
-    node_mix_rgb = NodeRGBColorSelect(nodes)
-
-    # create shader node
-    node_bsdf = nodes.new(type="ShaderNodeBsdfPrincipled")
-    node_bsdf.inputs[7].default_value = 0.65  # roughness
-    node_bsdf.inputs[12].default_value = 0.0  # clearcoat
-    node_bsdf.inputs[13].default_value = 0.25  # clearcoat roughness
-    node_bsdf.location = 1500, 0
-
-    node_output = nodes.new(type="ShaderNodeOutputMaterial")
-    node_output.location = 1800, 0
-
     # link nodes
     links = material.node_tree.links
     links.new(node_uv.outputs[0], node_sep.inputs[0])
@@ -127,11 +168,11 @@ def make_nodes_uv_mapped_material(material, color_image):
     links.new(node_div_x.outputs[0], node_comb.inputs[0])
     links.new(node_add_y.outputs[0], node_comb.inputs[1])
     links.new(node_comb.outputs[0], node_text.inputs[0])
-    links.new(node_text.outputs[0], node_mix_rgb.color_input)
-    links.new(node_mix_rgb.color_output, node_bsdf.inputs[0])
-    links.new(node_bsdf.outputs[0], node_output.inputs[0])
 
-    return node_mix_rgb
+    default_output_node = NodeOutput(
+        material.node_tree, input_color_link=node_text.outputs[0], location=(1200, 0)
+    )
+    return default_output_node
 
 
 def make_nodes_vertex_color_material(
