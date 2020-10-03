@@ -62,8 +62,8 @@ def render_kitti_point_cloud(gpu_compute=False):
     else:
         scene.cycles.device = "CPU"
 
-    point_cloud, color = get_semantic_kitti_point_cloud()
-    _ = add_point_cloud(pointcloud=point_cloud, colors=color, scene=scene)
+    point_cloud, colors = get_semantic_kitti_point_cloud()
+    _ = add_point_cloud(points=point_cloud, colors=colors, scene=scene)
     render(scene, cameras, "/tmp/blender_kitti_render_point_cloud_{}.png")
 
 
@@ -71,8 +71,7 @@ def render_kitti_voxels(gpu_compute=False):
 
     scene = setup_scene()
     cam_main = create_camera_perspective(
-        location=(2.86, 17.52, 3.74),
-        rotation_quat=(.749, .620, -.150, -.181),
+        location=(2.86, 17.52, 3.74), rotation_quat=(0.749, 0.620, -0.150, -0.181),
     )
     scene.collection.objects.link(cam_main)
 
@@ -94,6 +93,6 @@ def render_kitti_voxels(gpu_compute=False):
     else:
         scene.cycles.device = "CPU"
 
-    voxels, color = get_semantic_kitti_voxels()
-    _ = add_voxels(voxels, color, scene=scene)
+    voxels, colors = get_semantic_kitti_voxels()
+    _ = add_voxels(voxels=voxels, colors=colors, scene=scene)
     render(scene, [cam_top, cam_main], "/tmp/blender_kitti_render_voxels_{}.png")
