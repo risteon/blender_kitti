@@ -14,6 +14,7 @@ from ruamel.yaml import YAML
 
 from .particles import add_point_cloud, add_voxels, add_voxel_list
 from .mesh import add_object_from_mesh
+from .height_map import add_height_map
 from .scene_setup import setup_scene
 from .object_spotlight import add_spotlight_ground
 
@@ -43,6 +44,7 @@ data_structures = {
     "voxels": add_voxels,
     "voxel_list": add_voxel_list,
     "mesh": add_object_from_mesh,
+    "height_map": add_height_map,
 }
 data_tree = defaultdict(lambda: defaultdict(dict))
 
@@ -177,8 +179,9 @@ def extract_data_tasks_from_file(
     def m(task):
         kwargs = task[1]
         try:
-            yaml = YAML(typ="safe")
-            kwargs["config"] = yaml.load(kwargs["config"])
+            # unsafe loader for python objects
+            yaml = YAML(typ="unsafe")
+            kwargs["config"] = yaml.load(bytes(kwargs["config"]).decode())
         except KeyError:
             pass
         return task

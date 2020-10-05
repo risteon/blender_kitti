@@ -82,37 +82,37 @@ def _create_instancer_obj(
 
 
 @needs_bpy_bmesh()
-def _create_color_image(colors_rgba: np.ndarray, name: str, *, bpy):
-    assert colors_rgba.ndim == 2
+def _create_color_image(colors: np.ndarray, name: str, alpha: bool = True, *, bpy):
     # dtype and alpha channel checks
-    if colors_rgba.dtype == np.float32:
+    if colors.dtype == np.float32:
         pass
-    elif colors_rgba.dtype == np.uint8:
-        colors_rgba = colors_rgba.astype(np.float32) / 255.0
+    elif colors.dtype == np.uint8:
+        colors = colors.astype(np.float32) / 255.0
     else:
         raise NotImplementedError(
-            "Cannot handle colors_rgba with dtype {}.".format(str(colors_rgba.dtype))
+            "Cannot handle colors_rgba with dtype {}.".format(str(colors.dtype))
         )
-    if colors_rgba.shape[1] == 3:
-        colors_rgba = np.concatenate(
-            (colors_rgba, np.ones_like(colors_rgba[:, :1])), axis=-1
+
+    if colors.ndim != 3:
+        raise ValueError("Wrong number of dimensions.")
+    if colors.shape[2] not in [3, 4]:
+        raise ValueError(
+            "Cannot handle colors array with shape {}.".format(colors.shape)
         )
-    elif colors_rgba.shape[1] == 4:
+
+    if colors.shape[2] == 3:
+        colors = np.concatenate((colors, np.ones_like(colors[:, :, :1])), axis=-1)
+    elif colors.shape[2] == 4:
         pass
-    else:
-        raise NotImplementedError(
-            "Cannot handle colors_rgba with shape {}.".format(colors_rgba.shape)
-        )
-    assert colors_rgba.shape[1] == 4
 
     if name in bpy.data.images:
         raise RuntimeError("Image '{}' already exists.".format(name))
-    image = bpy.data.images.new(name, len(colors_rgba), 1, alpha=True)
-
-    colors_rgba = colors_rgba.reshape((-1))
-    image.pixels = [a for a in colors_rgba]
+    image = bpy.data.images.new(
+        name, width=colors.shape[1], height=colors.shape[0], alpha=alpha
+    )
+    image.pixels = colors.ravel()
     # super important. Otherwise the pixel data will just vanish from memory and be
-    # lost for certain after saving + loading the file.
+    # lost after saving + loading the file.
     image.pack()
     return image
 
@@ -132,7 +132,7 @@ def _create_particle_instancer(
     obj_instancer = _create_instancer_obj(positions, name_obj, name_mesh)
 
     if colors is not None:
-        image = _create_color_image(colors, name_image)
+        image = _create_color_image(colors[None, :, :], name_image)
         # the particle obj will use this material
         material, color_selector = create_uv_mapped_material(image, name_material)
     else:

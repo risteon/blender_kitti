@@ -41,10 +41,10 @@ def process_file(filename: str, scene=None):
             scene, cameras = None, None
 
     try:
-        add_objects_from_data(tasks, scene)
+        resulting_objects = add_objects_from_data(tasks, scene)
     except ImportError:
-        pass
-    return scene, global_config
+        resulting_objects = None
+    return scene, global_config, resulting_objects
 
 
 def make_scene_from_data_files(render_config: typing.Union[str, None], filenames):
