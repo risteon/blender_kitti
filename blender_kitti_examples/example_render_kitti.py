@@ -42,7 +42,7 @@ def render(scene, cameras, output_path, *, bpy):
 
         scene.camera = cam
         scene.render.filepath = p
-        bpy.ops.render.render(write_still=True)
+        bpy.ops.render.render(write_still=True, scene=scene.name)
 
 
 def render_kitti_point_cloud(gpu_compute=False):
