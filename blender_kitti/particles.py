@@ -284,4 +284,7 @@ def add_point_cloud(
     )
 
     scene.collection.objects.link(obj_point_cloud)
-    return obj_point_cloud, {"color_selector": color_selector}
+    return (
+        obj_point_cloud,
+        {"color_selector": color_selector, "obj_particle": obj_particle},
+    )
