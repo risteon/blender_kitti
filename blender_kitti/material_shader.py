@@ -111,6 +111,106 @@ class NodeOutput:
         return self.node_rgb_color_select.color_input
 
 
+class ColorAttrSelector:
+    def __init__(
+        self,
+        node_tree,
+        *,
+        vertex_attr_rgb,
+        vertex_attr_scalar,
+        default_color=NodeRGBColorSelect.COLOR_BLACK,
+    ):
+        self._attrs = list(vertex_attr_rgb) + list(vertex_attr_scalar)
+        self._cut = len(vertex_attr_rgb)
+        self._attrs_rgb = vertex_attr_rgb
+        self._attrs_scalar = vertex_attr_scalar
+
+        nodes = node_tree.nodes
+        links = node_tree.links
+
+        self.rgb_attr_node = nodes.new(type="ShaderNodeAttribute")
+        self.rgb_attr_node.location = 0, 0
+        self.rgb_attr_node.attribute_name = "<unset>"
+
+        self.scalar_attr_node = nodes.new(type="ShaderNodeAttribute")
+        self.scalar_attr_node.location = 0, -200
+        self.scalar_attr_node.attribute_name = "<unset>"
+
+        node_scale = nodes.new(type="ShaderNodeMath")
+        node_scale.inputs[1].default_value = 0.35
+        node_scale.operation = "MULTIPLY"
+        node_scale.location = 200, -200
+        node_add = nodes.new(type="ShaderNodeMath")
+        node_add.inputs[1].default_value = 0.5
+        node_add.operation = "ADD"
+        node_add.location = 400, -200
+
+        node_hue = nodes.new(type="ShaderNodeHueSaturation")
+        node_hue.location = 600, -200
+        node_hue.inputs[1].default_value = 1.0
+        node_hue.inputs[2].default_value = 0.6
+        node_hue.inputs[3].default_value = 1.0
+        node_hue.inputs[4].default_value = 0.8, 0.0, 0.0, 1.0
+
+        # switch between RGB and scalar
+        self.node_color_switch = nodes.new(type="ShaderNodeMixRGB")
+        self.node_color_switch.location = 800, 0
+        self.node_color_switch.inputs[0].default_value = 0.0
+
+        # mix between attr and default
+        self.node_color_default = nodes.new(type="ShaderNodeMixRGB")
+        self.node_color_default.location = 1000, 0
+        self.node_color_default.inputs[0].default_value = 0.0  # attr color
+        self.node_color_default.inputs[2].default_value = default_color
+
+        links.new(self.rgb_attr_node.outputs[0], self.node_color_switch.inputs[1])
+
+        links.new(self.scalar_attr_node.outputs[2], node_scale.inputs[0])
+        links.new(node_scale.outputs[0], node_add.inputs[0])
+        links.new(node_add.outputs[0], node_hue.inputs[0])
+        links.new(node_hue.outputs[0], self.node_color_switch.inputs[2])
+
+        links.new(self.node_color_switch.outputs[0], self.node_color_default.inputs[1])
+
+    @property
+    def color_output(self):
+        return self.node_color_default.outputs[0]
+
+    def __len__(self):
+        return len(self._attrs)
+
+    def __call__(self, desc: typing.Union[int, str, None]):
+        if desc is None:
+            self.node_color_default.inputs[0].default_value = 1.0
+            return
+
+        if isinstance(desc, int):
+            if desc < 0:
+                # set to default color
+                self.node_color_default.inputs[0].default_value = 1.0
+            else:
+                self.node_color_default.inputs[0].default_value = 0.0
+                target = (
+                    self.rgb_attr_node if desc < self._cut else self.scalar_attr_node
+                )
+                target.attribute_name = self._attrs[desc]
+
+        else:
+            if desc not in self._attrs:
+                raise ValueError("Vertex color names not found.")
+
+            self.node_color_default.inputs[0].default_value = 0.0
+            if desc in self._attrs_rgb:
+                self.rgb_attr_node.attribute_name = desc
+                self.node_color_switch.inputs[0].default_value = 0.0
+            else:
+                self.scalar_attr_node.attribute_name = desc
+                self.node_color_switch.inputs[0].default_value = 1.0
+
+    def __iter__(self):
+        return iter(self._attrs)
+
+
 def make_nodes_simple_material(material, base_color):
     material.use_nodes = True
     nodes = material.node_tree.nodes
@@ -175,8 +275,16 @@ def make_nodes_uv_mapped_material(material, color_image):
     return default_output_node
 
 
+def make_pseudo_color_nodes(node_tree):
+    pass
+
+
 def make_nodes_vertex_color_material(
-    material, vertex_color_layer_names: [str], default_color, mode: str = "select"
+    material,
+    vertex_attr_rgb: [str],
+    vertex_attr_scalar: [str],
+    default_color,
+    mode: str = "select",
 ):
 
     if mode not in ["select", "mix"]:
@@ -188,62 +296,42 @@ def make_nodes_vertex_color_material(
 
     links = material.node_tree.links
 
-    def create_attr_input_node(attribute_name: str):
+    def create_attr_input_node(attribute_name: str = "<unset>"):
         attr_node = nodes.new(type="ShaderNodeAttribute")
         attr_node.location = 0, 0
         attr_node.attribute_name = attribute_name
         return attr_node
 
     selector = None
-    node_color = nodes.new(type="ShaderNodeMixRGB")
 
     if mode == "mix":
 
         # default color input node, if no vertex colors are given
         node_default_color = nodes.new(type="ShaderNodeRGB")
         node_default_color.outputs[0].default_value = default_color
-        nodes_input_attrs = list(map(create_attr_input_node, vertex_color_layer_names))
+        nodes_input_attrs = list(map(create_attr_input_node, vertex_attr_rgb))
         raise NotImplementedError()
 
     elif mode == "select":
 
-        node_vertex_color = create_attr_input_node("dummy")
-
-        # mix vertex colors with default color
-        node_color.location = 200, 0
-        node_color.inputs[0].default_value = 0.0  # vertex color
-        node_color.inputs[1].default_value = 1.0, 1.0, 1.0, 1.0
-        node_color.inputs[2].default_value = default_color
-
-        links.new(node_vertex_color.outputs[0], node_color.inputs[1])
-
-        def selector(desc: typing.Union[int, str]):
-            if isinstance(desc, int):
-                if desc < 0:
-                    # set to default color
-                    node_color.inputs[0].default_value = 1.0
-                    return
-                else:
-                    node_color.inputs[0].default_value = 0.0
-                    node_vertex_color.attribute_name = vertex_color_layer_names[desc]
-            else:
-                if desc not in vertex_color_layer_names:
-                    raise ValueError("Vertex color names not found.")
-                node_color.inputs[0].default_value = 0.0
-                node_vertex_color.attribute_name = desc
+        selector = ColorAttrSelector(
+            material.node_tree,
+            vertex_attr_rgb=vertex_attr_rgb,
+            vertex_attr_scalar=vertex_attr_scalar,
+        )
 
     # create shader node
     node_bsdf = nodes.new(type="ShaderNodeBsdfPrincipled")
     node_bsdf.inputs[7].default_value = 0.65  # roughness
     node_bsdf.inputs[12].default_value = 1.0  # clearcoat
     node_bsdf.inputs[13].default_value = 0.50  # clearcoat roughness
-    node_bsdf.location = 620, 0
+    node_bsdf.location = 1200, 0
     # create output node
     node_output = nodes.new(type="ShaderNodeOutputMaterial")
-    node_output.location = 900, 0
+    node_output.location = 1500, 0
 
     # link nodes
-    links.new(node_color.outputs[0], node_bsdf.inputs[0])
+    links.new(selector.color_output, node_bsdf.inputs[0])
     links.new(node_bsdf.outputs[0], node_output.inputs[0])
 
     return selector
@@ -270,13 +358,14 @@ def create_uv_mapped_material(color_image, name_material: str = "material_point_
 
 
 def create_vertex_color_material(
-    vertex_color_layer_names: [str],
+    vertex_attr_rgb: [str],
+    vertex_attr_scalar: [str],
     default_color,
     mode: str = "select",
     name_material: str = "material_vertex_color",
 ):
     mat = create_or_get_material(name_material)
     selector = make_nodes_vertex_color_material(
-        mat, vertex_color_layer_names, default_color, mode
+        mat, vertex_attr_rgb, vertex_attr_scalar, default_color, mode
     )
     return mat, selector

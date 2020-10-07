@@ -57,25 +57,31 @@ def create_mesh(
         np.full(fill_value=use_smooth, shape=[len(mesh.polygons)], dtype=np.bool),
     )
 
+    attr_keys_rgb = set()
+    attr_keys_scalar = set()
     # Create vertex color layers and set values
     if vertex_colors is not None:
-        add_vertex_color_layers(mesh, vertex_index, vertex_colors)
+        attr_keys_rgb.update(add_vertex_color_layers(mesh, vertex_index, vertex_colors))
 
     if face_colors is not None:
-        add_vertex_color_layers_from_face_colors(mesh, vertex_index, face_colors)
+        attr_keys_rgb.update(
+            add_vertex_color_layers_from_face_colors(mesh, vertex_index, face_colors)
+        )
 
     if scalar_values is not None:
-        add_vertex_colors_from_scalar(mesh, vertex_index, scalar_values)
+        attr_keys_scalar.update(
+            add_vertex_colors_from_scalar(mesh, vertex_index, scalar_values)
+        )
 
     mesh.update()
     mesh.validate()
-    return mesh
+    return mesh, attr_keys_rgb, attr_keys_scalar
 
 
 def add_vertex_color_layers_from_face_colors(
     mesh, vertex_indices, face_colors: {str: np.ndarray}
-):
-
+) -> {str}:
+    vertex_attr_keys = set()
     for fcolor_name, fcolors in face_colors.items():
         if (
             fcolors.dtype != np.uint8
@@ -93,12 +99,18 @@ def add_vertex_color_layers_from_face_colors(
         fcolors = np.reshape(fcolors, [-1])
         assert fcolors.shape[0] == 4 * vertex_indices.shape[0]
 
-        vcol_lay = mesh.vertex_colors.new(name="fcolor_{}".format(fcolor_name))
+        attr_key = "fcolor_{}".format(fcolor_name)
+        vcol_lay = mesh.vertex_colors.new(name=attr_key)
         vcol_lay.data.foreach_set("color", fcolors)
+        vertex_attr_keys.add(attr_key)
+    return vertex_attr_keys
 
 
-def add_vertex_color_layers(mesh, vertex_indices, vertex_colors: {str: np.ndarray}):
+def add_vertex_color_layers(
+    mesh, vertex_indices, vertex_colors: {str: np.ndarray}
+) -> {str}:
 
+    vertex_attr_keys = set()
     for vcolor_name, vcolors in vertex_colors.items():
         if (
             vcolors.dtype != np.uint8
@@ -116,13 +128,17 @@ def add_vertex_color_layers(mesh, vertex_indices, vertex_colors: {str: np.ndarra
         vcolors = vcolors.reshape([-1])
         assert vcolors.shape[0] == 4 * vertex_indices.shape[0]
 
+        attr_key = "vcolor_{}".format(vcolor_name)
+        vertex_attr_keys.add(attr_key)
         vcol_lay = mesh.vertex_colors.new(name="vcolor_{}".format(vcolor_name))
         vcol_lay.data.foreach_set("color", vcolors)
+
+    return vertex_attr_keys
 
 
 def add_vertex_colors_from_scalar(
     mesh, vertex_indices, scalar_values: {str: np.ndarray}
-):
+) -> {str}:
     def add_values(v, name):
         colors = np.tile(v[:, None], reps=[1, 3])
         # add alpha
@@ -133,25 +149,30 @@ def add_vertex_colors_from_scalar(
         colors = colors.reshape([-1])
         assert colors.shape[0] == 4 * vertex_indices.shape[0]
 
-        vcol_lay = mesh.vertex_colors.new(name="vcolor_{}".format(name))
+        attr_key = "vcolor_{}".format(name)
+        vcol_lay = mesh.vertex_colors.new(name=attr_key)
         vcol_lay.data.foreach_set("color", colors)
+        return attr_key
 
+    vertex_attr_keys = set()
     for scolor_name, s_values in scalar_values.items():
         if s_values.dtype != np.float32 or s_values.ndim != 1:
             raise ValueError("Need scalar values in [N] float32 format.")
 
+        # Todo: learn how blender handles value ranges.
+        # Todo: use something that is less random.
         value_ranges = [
-            (np.min(s_values), np.max(s_values)),
-            (0.0, 1.0),
-            (0.0, 2.0),
-            (0.0, 5.0),
-            (1.0, 2.0),
+            (0.0, 3.5),
         ]
 
         for r in value_ranges:
             values = (s_values - r[0]) / (r[1] - r[0])
             values = np.clip(values, 0.0, 1.0)
-            add_values(values, "{}_{:.2f}_{:.2f}".format(scolor_name, r[0], r[1]))
+            vertex_attr_keys.add(
+                add_values(values, "{}_{:.2f}_{:.2f}".format(scolor_name, r[0], r[1]))
+            )
+
+    return vertex_attr_keys
 
 
 @needs_bpy_bmesh(run_anyway=True)
@@ -173,7 +194,7 @@ def create_obj_from_mesh(
     except AttributeError:
         pass
 
-    mesh = create_mesh(
+    mesh, attr_keys_rgb, attr_keys_scalar = create_mesh(
         vertices,
         triangles,
         vertex_colors,
@@ -185,7 +206,8 @@ def create_obj_from_mesh(
 
     default_color = 0.0, 0.0, 0.0, 1.0  # black
     mat, select_vertex_color = create_vertex_color_material(
-        list(mesh.vertex_colors.keys()),
+        list(attr_keys_rgb),
+        list(attr_keys_scalar),
         default_color,
         mode="select",
         name_material="{}_material".format(name_prefix),
