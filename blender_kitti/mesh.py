@@ -123,11 +123,8 @@ def add_vertex_color_layers(mesh, vertex_indices, vertex_colors: {str: np.ndarra
 def add_vertex_colors_from_scalar(
     mesh, vertex_indices, scalar_values: {str: np.ndarray}
 ):
-    for scolor_name, s_values in scalar_values.items():
-        if s_values.dtype != np.float32 or s_values.ndim != 1:
-            raise ValueError("Need scalar values in [N] float32 format.")
-
-        colors = np.tile(s_values[:, None], reps=[1, 3])
+    def add_values(v, name):
+        colors = np.tile(v[:, None], reps=[1, 3])
         # add alpha
         colors = np.concatenate((colors, np.ones_like(colors[:, :1])), axis=-1)
 
@@ -136,8 +133,25 @@ def add_vertex_colors_from_scalar(
         colors = colors.reshape([-1])
         assert colors.shape[0] == 4 * vertex_indices.shape[0]
 
-        vcol_lay = mesh.vertex_colors.new(name="vcolor_{}".format(scolor_name))
+        vcol_lay = mesh.vertex_colors.new(name="vcolor_{}".format(name))
         vcol_lay.data.foreach_set("color", colors)
+
+    for scolor_name, s_values in scalar_values.items():
+        if s_values.dtype != np.float32 or s_values.ndim != 1:
+            raise ValueError("Need scalar values in [N] float32 format.")
+
+        value_ranges = [
+            (np.min(s_values), np.max(s_values)),
+            (0.0, 1.0),
+            (0.0, 2.0),
+            (0.0, 5.0),
+            (1.0, 2.0),
+        ]
+
+        for r in value_ranges:
+            values = (s_values - r[0]) / (r[1] - r[0])
+            values = np.clip(values, 0.0, 1.0)
+            add_values(values, "{}_{:.2f}_{:.2f}".format(scolor_name, r[0], r[1]))
 
 
 @needs_bpy_bmesh(run_anyway=True)
