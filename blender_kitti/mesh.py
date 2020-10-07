@@ -12,6 +12,7 @@ def create_mesh(
     triangles: np.ndarray,
     vertex_colors: {str: np.ndarray} = None,
     face_colors: {str: np.ndarray} = None,
+    scalar_values: {str: np.ndarray} = None,
     use_smooth: bool = True,
     *,
     name: str,
@@ -34,8 +35,12 @@ def create_mesh(
     num_loops = loop_start.shape[0]
 
     # Create mesh object based on the arrays above
-    if name in bpy.data.meshes:
-        raise RuntimeError("Mesh '{}' already exists.".format(name))
+    try:
+        if name in bpy.data.meshes:
+            raise RuntimeError("Mesh '{}' already exists.".format(name))
+    except AttributeError:
+        pass
+
     mesh = bpy.data.meshes.new(name=name)
 
     mesh.vertices.add(num_vertices)
@@ -58,6 +63,9 @@ def create_mesh(
 
     if face_colors is not None:
         add_vertex_color_layers_from_face_colors(mesh, vertex_index, face_colors)
+
+    if scalar_values is not None:
+        add_vertex_colors_from_scalar(mesh, vertex_index, scalar_values)
 
     mesh.update()
     mesh.validate()
@@ -112,26 +120,51 @@ def add_vertex_color_layers(mesh, vertex_indices, vertex_colors: {str: np.ndarra
         vcol_lay.data.foreach_set("color", vcolors)
 
 
+def add_vertex_colors_from_scalar(
+    mesh, vertex_indices, scalar_values: {str: np.ndarray}
+):
+    for scolor_name, s_values in scalar_values.items():
+        if s_values.dtype != np.float32 or s_values.ndim != 1:
+            raise ValueError("Need scalar values in [N] float32 format.")
+
+        colors = np.tile(s_values[:, None], reps=[1, 3])
+        # add alpha
+        colors = np.concatenate((colors, np.ones_like(colors[:, :1])), axis=-1)
+
+        # replicate vertex colors for each triangle at a vertex
+        colors = colors[vertex_indices]
+        colors = colors.reshape([-1])
+        assert colors.shape[0] == 4 * vertex_indices.shape[0]
+
+        vcol_lay = mesh.vertex_colors.new(name="vcolor_{}".format(scolor_name))
+        vcol_lay.data.foreach_set("color", colors)
+
+
 @needs_bpy_bmesh(run_anyway=True)
 def create_obj_from_mesh(
     vertices: np.ndarray,
     triangles: np.ndarray,
     vertex_colors: {str: np.ndarray} = None,
     face_colors: {str: np.ndarray} = None,
+    scalar_values: {str: np.ndarray} = None,
     *,
     name_prefix: str,
     bpy,
 ):
 
     obj_name = "{}_obj".format(name_prefix)
-    if obj_name in bpy.data.objects:
-        raise RuntimeError("Obj '{}' already exists.".format(obj_name))
+    try:
+        if obj_name in bpy.data.objects:
+            raise RuntimeError("Obj '{}' already exists.".format(obj_name))
+    except AttributeError:
+        pass
 
     mesh = create_mesh(
         vertices,
         triangles,
         vertex_colors,
         face_colors,
+        scalar_values,
         name="{}_mesh".format(name_prefix),
     )
     obj = bpy.data.objects.new(obj_name, mesh)
@@ -159,12 +192,18 @@ def add_object_from_mesh(
     triangles: np.ndarray,
     vertex_colors: {str: np.ndarray} = None,
     face_colors: {str: np.ndarray} = None,
+    scalar_values: {str: np.ndarray} = None,
     *,
     scene,
     name_prefix: str,
 ):
     obj, select_vertex_color = create_obj_from_mesh(
-        vertices, triangles, vertex_colors, face_colors, name_prefix=name_prefix
+        vertices,
+        triangles,
+        vertex_colors,
+        face_colors,
+        scalar_values,
+        name_prefix=name_prefix,
     )
 
     scene.collection.objects.link(obj)
