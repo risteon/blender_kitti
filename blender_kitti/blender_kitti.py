@@ -44,7 +44,6 @@ data_structures = {
     "voxel_list": add_voxel_list,
     "mesh": add_object_from_mesh,
 }
-data_tree = defaultdict(lambda: defaultdict(dict))
 
 
 def add_objects_from_data(tasks: {str: typing.Any}, scene):
@@ -138,7 +137,7 @@ def extract_data_tasks_from_file(
     matches = list(filter(filter_fn, matches))
     matches = [(data[x[0]], x[1].groups()) for x in matches]
 
-    x = data_tree
+    x = defaultdict(lambda: defaultdict(dict))
     for d, key in matches:
         if key[3] is None:
             x[key[0]][key[1]][key[2]] = d

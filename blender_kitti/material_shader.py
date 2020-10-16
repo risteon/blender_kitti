@@ -210,6 +210,10 @@ class ColorAttrSelector:
     def __iter__(self):
         return iter(self._attrs)
 
+    @property
+    def attrs(self):
+        return self._attrs
+
 
 def make_nodes_simple_material(material, base_color):
     material.use_nodes = True
