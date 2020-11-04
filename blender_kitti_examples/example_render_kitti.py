@@ -3,12 +3,20 @@
 
 import pathlib
 from blender_kitti.bpy_helper import needs_bpy_bmesh
-from blender_kitti import add_point_cloud, add_voxels, setup_scene, add_cameras_default
+from blender_kitti import (
+    add_point_cloud,
+    add_voxels,
+    setup_scene,
+    add_cameras_default,
+)
 from blender_kitti.scene_setup import (
     create_camera_top_view_ortho,
     create_camera_perspective,
 )
-from .data import get_semantic_kitti_point_cloud, get_semantic_kitti_voxels
+from .data import (
+    get_semantic_kitti_point_cloud,
+    get_semantic_kitti_voxels,
+)
 
 
 def dry_render(_scene, cameras, output_path):

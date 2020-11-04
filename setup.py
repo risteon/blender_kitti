@@ -12,7 +12,5 @@ setup(
     zip_safe=False,
     install_requires=["ruamel.yaml", "click", "numpy", "decorator",],
     python_requires=">=3.5",
-    entry_points={
-        "console_scripts": ["blender_kitti_render=blender_kitti.cli:render"]
-    },
+    entry_points={"console_scripts": ["blender_kitti_render=blender_kitti.cli:render"]},
 )
