@@ -98,7 +98,7 @@ def render_kitti_scene_flow(gpu_compute=False):
 
     # reduce number of points, especially near vehicle
     point_cloud, _ = get_semantic_kitti_point_cloud()
-    num_pts = 1000
+    num_pts = 6000
     dist = np.linalg.norm(point_cloud, axis=-1)
     prob = (dist - dist.min()) / (dist.max() - dist.min())
     prob_normed = prob / prob.sum()

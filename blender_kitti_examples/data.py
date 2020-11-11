@@ -140,7 +140,7 @@ def get_pseudo_flow(point_cloud):
     rot_homog[1, 0] = sa
     rot_homog[1, 1] = ca
 
-    rot_around_y = 5.0
+    rot_around_y = 10.0
     transl_homog = np.eye(4)
     transl_homog_reverse = np.eye(4)
     transl_homog[1, 3] = rot_around_y
