@@ -26,4 +26,4 @@ def setup_system(enable_gpu_rendering: bool = True, scene=None, *, bpy):
         enable_cycles_render_devices()
         if scene is None:
             scene = bpy.context.scene
-        scene.cycles.device = 'GPU'
+        scene.cycles.device = "GPU"

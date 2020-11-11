@@ -5,6 +5,7 @@
 | ![KITTI Point Cloud](img/blender_kitti_render_point_cloud_main.png?raw=true "Main view") |![KITTI Point Cloud](img/blender_kitti_render_point_cloud_top.png?raw=true "Top view") |
 |:-------------------------:|:-------------------------:|
 | ![KITTI Point Cloud](img/blender_kitti_render_voxels_main.png?raw=true "Main view voxels") |![KITTI Point Cloud](img/blender_kitti_render_voxels_top.png?raw=true "Top view voxels") |
+| ![KITTI Scene Flow](img/blender_kitti_render_scene_flow_main.png?raw=true "Main view scene flow") |![KITTI Scene Flow](img/blender_kitti_render_scene_flow_top.png?raw=true "Top view scene flow") |
 
 ## About
 
@@ -58,6 +59,15 @@ $ blender --background --python-console
 
 >>> import blender_kitti_examples
 >>> blender_kitti_examples.render_kitti_voxels()
+```
+
+Render the bundled KITTI point cloud with pseudo odometry for hsv colored scene flow from two different camera perspectives. This writes two image files to the `/tmp` folder.
+
+```
+$ blender --background --python-console
+
+>>> import blender_kitti_examples
+>>> blender_kitti_examples.render_kitti_scene_flow()
 ```
 
 ## Work on a scene in Blender
