@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """"""
+import colorsys
 import pathlib
 import numpy as np
 from ruamel.yaml import YAML
@@ -98,7 +99,12 @@ def get_semantic_kitti_point_cloud():
         raise FileNotFoundError("Cannot find semantic kitti label file.")
 
     config_data = get_semantic_kitti_config()
-    point_cloud = np.fromfile(str(file_point_cloud), dtype=np.float32).reshape((-1, 4,))
+    point_cloud = np.fromfile(str(file_point_cloud), dtype=np.float32).reshape(
+        (
+            -1,
+            4,
+        )
+    )
     label = np.fromfile(str(file_semantic_label), dtype=np.uint32).reshape((-1,))
     label_sem = label & 0xFFFF  # semantic label in lower half
     label_inst = label >> 16  # instance id in upper half
@@ -117,3 +123,49 @@ def get_semantic_kitti_point_cloud():
     label = np.vectorize(mapping.get, otypes=[np.int16])(label_sem)
     colors = semantic_colors[label]
     return point_cloud[:, :3], colors
+
+
+def get_pseudo_flow(point_cloud):
+
+    points_homog = np.concatenate(
+        [point_cloud, np.ones((point_cloud.shape[0], 1))], axis=-1
+    )
+
+    rot_angle = np.pi / 32.0
+    ca = np.cos(rot_angle)
+    sa = np.sin(rot_angle)
+    rot_homog = np.eye(4)
+    rot_homog[0, 0] = ca
+    rot_homog[0, 1] = -sa
+    rot_homog[1, 0] = sa
+    rot_homog[1, 1] = ca
+
+    rot_around_y = 5.0
+    transl_homog = np.eye(4)
+    transl_homog_reverse = np.eye(4)
+    transl_homog[1, 3] = rot_around_y
+    transl_homog_reverse[1, 3] = -rot_around_y
+
+    odom = np.matmul(transl_homog, np.matmul(rot_homog, transl_homog_reverse))
+
+    odom[0, 3] = -1.0
+
+    flow = ((np.matmul(odom, points_homog.T) - points_homog.T).T)[..., 0:3]
+
+    colors_hsv = np.ones_like(flow)
+
+    flow_azi = np.arctan2(flow[..., 1], flow[..., 0])
+    colors_hsv[..., 0] = np.fmod(flow_azi + np.pi, 2 * np.pi) / (2 * np.pi)
+
+    colors = []
+    for color in colors_hsv:
+        colors.append(colorsys.hsv_to_rgb(color[0], color[1], color[2]))
+    colors_rgb = np.array(colors)
+    colors_rgba = np.concatenate(
+        [
+            colors_rgb,
+            0.3 * np.ones(colors_rgb.shape[0])[..., None],
+        ],
+        axis=-1,
+    ).astype(np.float32)
+    return flow, colors_rgba

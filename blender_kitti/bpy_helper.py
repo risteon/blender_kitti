@@ -24,6 +24,10 @@ try:
 except ImportError:
     bmesh = None
 
+try:
+    import mathutils
+except ImportError:
+    mathutils = None
 
 def needs_bpy_bmesh(
     default_return=None, alternative_func=None, run_anyway: bool = False
@@ -33,7 +37,7 @@ def needs_bpy_bmesh(
     """
 
     # list modules to look for in kw-only args
-    m = {"bpy": bpy, "bmesh": bmesh}
+    m = {"bpy": bpy, "bmesh": bmesh, "mathutils": mathutils}
 
     def inner(func):
         argspec = inspect.getfullargspec(func)

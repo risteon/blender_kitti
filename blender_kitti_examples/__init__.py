@@ -3,9 +3,14 @@
 __author__ = """Christoph Rist"""
 __email__ = "c.rist@posteo.de"
 
-from .example_render_kitti import render_kitti_point_cloud, render_kitti_voxels
+from .example_render_kitti import (
+    render_kitti_point_cloud,
+    render_kitti_voxels,
+    render_kitti_scene_flow,
+)
 
 __all__ = [
     "render_kitti_point_cloud",
     "render_kitti_voxels",
+    "render_kitti_scene_flow",
 ]
