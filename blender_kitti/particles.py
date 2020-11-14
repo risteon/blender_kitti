@@ -158,9 +158,7 @@ def create_cube(name_prefix: str, *, edge_length: float = 0.16, bpy, bmesh):
 
     bm = bmesh.new()
     bmesh.ops.create_cube(
-        bm,
-        size=edge_length,
-        calc_uvs=False,
+        bm, size=edge_length, calc_uvs=False,
     )
 
     me = bpy.data.meshes.new("{}_mesh".format(name_prefix))
@@ -173,22 +171,30 @@ def create_cube(name_prefix: str, *, edge_length: float = 0.16, bpy, bmesh):
 
 @needs_bpy_bmesh()
 def create_icosphere(
-    name_prefix: str, *, subdivisions: int = 3, radius: float = 0.02, bpy, bmesh
+    name_prefix: str,
+    *,
+    subdivisions: int = 3,
+    radius: float = 0.02,
+    use_smooth: bool = True,
+    bpy,
+    bmesh,
 ):
 
     bm = bmesh.new()
     bmesh.ops.create_icosphere(
-        bm,
-        subdivisions=subdivisions,
-        diameter=2.0 * radius,
-        calc_uvs=False,
+        bm, subdivisions=subdivisions, diameter=2.0 * radius, calc_uvs=False,
     )
 
-    me = bpy.data.meshes.new("{}_mesh".format(name_prefix))
-    bm.to_mesh(me)
+    mesh = bpy.data.meshes.new("{}_mesh".format(name_prefix))
+    bm.to_mesh(mesh)
     bm.free()
 
-    obj = bpy.data.objects.new("{}_obj".format(name_prefix), me)
+    mesh.polygons.foreach_set(
+        "use_smooth",
+        np.full(fill_value=use_smooth, shape=[len(mesh.polygons)], dtype=np.bool),
+    )
+
+    obj = bpy.data.objects.new("{}_obj".format(name_prefix), mesh)
     return obj
 
 
