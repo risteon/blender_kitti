@@ -3,6 +3,7 @@
 import typing
 
 from .bpy_helper import needs_bpy_bmesh
+from .colormap_turbo import turbo_colormap_data
 
 
 class NodeRGBColorSelect:
@@ -111,6 +112,47 @@ class NodeOutput:
         return self.node_rgb_color_select.color_input
 
 
+def make_color_ramp_node(nodes, colormap):
+    node = nodes.new(type="ShaderNodeValToRGB")
+    color_ramp_elements = node.color_ramp.elements
+
+    n_stops = len(colormap)
+    for i, color in enumerate(colormap):
+        element = color_ramp_elements.new(position=i / (n_stops - 1))
+        element.color = color + [1.0]
+
+    return node
+
+
+def make_pseudo_color(
+    node_tree,
+    colormap=turbo_colormap_data,
+    min_value: float = 0.0,
+    max_value: float = 1.0,
+    location=(0, 0),
+):
+    nodes = node_tree.nodes
+    links = node_tree.links
+
+    node_add = nodes.new(type="ShaderNodeMath")
+    node_add.inputs[1].default_value = -min_value
+    node_add.operation = "ADD"
+    node_add.location = location
+
+    node_scale = nodes.new(type="ShaderNodeMath")
+    node_scale.inputs[1].default_value = 1 / (max_value - min_value)
+    node_scale.operation = "MULTIPLY"
+    node_scale.location = (location[0] + 200, location[1])
+
+    node_ramp = make_color_ramp_node(nodes, colormap)
+
+    links.new(node_add.outputs[0], node_scale.inputs[0])
+    links.new(node_scale.outputs[0], node_ramp.inputs[0])
+
+    # input / output
+    return node_add.inputs[0], node_ramp.outputs[0]
+
+
 class ColorAttrSelector:
     def __init__(
         self,
@@ -136,21 +178,7 @@ class ColorAttrSelector:
         self.scalar_attr_node.location = 0, -200
         self.scalar_attr_node.attribute_name = "<unset>"
 
-        node_scale = nodes.new(type="ShaderNodeMath")
-        node_scale.inputs[1].default_value = 0.35
-        node_scale.operation = "MULTIPLY"
-        node_scale.location = 200, -200
-        node_add = nodes.new(type="ShaderNodeMath")
-        node_add.inputs[1].default_value = 0.5
-        node_add.operation = "ADD"
-        node_add.location = 400, -200
-
-        node_hue = nodes.new(type="ShaderNodeHueSaturation")
-        node_hue.location = 600, -200
-        node_hue.inputs[1].default_value = 1.0
-        node_hue.inputs[2].default_value = 0.6
-        node_hue.inputs[3].default_value = 1.0
-        node_hue.inputs[4].default_value = 0.8, 0.0, 0.0, 1.0
+        input_scalar, output_pseudo_rgb = make_pseudo_color(node_tree)
 
         # switch between RGB and scalar
         self.node_color_switch = nodes.new(type="ShaderNodeMixRGB")
@@ -165,10 +193,8 @@ class ColorAttrSelector:
 
         links.new(self.rgb_attr_node.outputs[0], self.node_color_switch.inputs[1])
 
-        links.new(self.scalar_attr_node.outputs[2], node_scale.inputs[0])
-        links.new(node_scale.outputs[0], node_add.inputs[0])
-        links.new(node_add.outputs[0], node_hue.inputs[0])
-        links.new(node_hue.outputs[0], self.node_color_switch.inputs[2])
+        links.new(self.scalar_attr_node.outputs[2], input_scalar)
+        links.new(output_pseudo_rgb, self.node_color_switch.inputs[2])
 
         links.new(self.node_color_switch.outputs[0], self.node_color_default.inputs[1])
 
@@ -277,10 +303,6 @@ def make_nodes_uv_mapped_material(material, color_image):
         material.node_tree, input_color_link=node_text.outputs[0], location=(1200, 0)
     )
     return default_output_node
-
-
-def make_pseudo_color_nodes(node_tree):
-    pass
 
 
 def make_nodes_vertex_color_material(
