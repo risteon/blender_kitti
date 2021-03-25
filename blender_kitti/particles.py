@@ -374,6 +374,10 @@ def add_flow_mesh(
     flow: np.ndarray,
     colors_rgba: np.ndarray = None,
     name_prefix: str = "flow",
+    arrow_shaft_diameter: float = 0.05,
+    arrow_shaft_length: float = 1.0,
+    arrow_head_height: float = 0.2,
+    arrow_head_diameter: float = 0.15,
     scene,
     mathutils,
     bpy,
@@ -396,31 +400,28 @@ def add_flow_mesh(
         colors_rgba = colors_rgba.astype(np.float32)
 
     # arrow shaft
-    shaft_diameter: float = 0.05
-    shaft_length: float = 1.0
     arrow_shaft = bmesh.new()
     bmesh.ops.create_cone(
         arrow_shaft,
         cap_ends=True,
         cap_tris=False,
         segments=10,
-        diameter1=shaft_diameter,
-        diameter2=shaft_diameter,
-        depth=shaft_length,
+        diameter1=arrow_shaft_diameter,
+        diameter2=arrow_shaft_diameter,
+        depth=arrow_shaft_length,
         calc_uvs=False,
     )
 
     # arrow head
-    head_height: float = 0.2
     arrow_head = bmesh.new()
     bmesh.ops.create_cone(
         arrow_head,
         cap_ends=True,
         cap_tris=False,
         segments=10,
-        diameter1=3.0 * shaft_diameter,
+        diameter1=arrow_head_diameter,
         diameter2=0.0,
-        depth=head_height,
+        depth=arrow_head_height,
         calc_uvs=False,
     )
 
