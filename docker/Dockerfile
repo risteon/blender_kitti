@@ -1,18 +1,19 @@
-FROM nvidia/cuda:10.1-cudnn7-runtime-ubuntu18.04
+FROM nvidia/cuda:11.3.0-cudnn8-devel-ubuntu20.04
 
 # proxy needs to be provided from the outside
-ARG DOCKER_PROXY=""
+ARG DOCKER_PROXY_HOST=""
+ARG DOCKER_PROXY_PORT=""
 
 # run build using bash
 SHELL ["/bin/bash", "-c"]
 
 # set proxy
-ENV http_proxy="${DOCKER_PROXY}"
-ENV https_proxy="${DOCKER_PROXY}"
-ENV ftp_proxy="${DOCKER_PROXY}"
-ENV HTTP_PROXY="${DOCKER_PROXY}"
-ENV HTTPS_PROXY="${DOCKER_PROXY}"
-ENV FTP_PROXY="${DOCKER_PROXY}"
+ENV http_proxy="http://${DOCKER_PROXY_HOST}:${DOCKER_PROXY_PORT}"
+ENV https_proxy="http://${DOCKER_PROXY_HOST}:${DOCKER_PROXY_PORT}"
+ENV ftp_proxy="http://${DOCKER_PROXY_HOST}:${DOCKER_PROXY_PORT}"
+ENV HTTP_PROXY="http://${DOCKER_PROXY_HOST}:${DOCKER_PROXY_PORT}"
+ENV HTTPS_PROXY="http://${DOCKER_PROXY_HOST}:${DOCKER_PROXY_PORT}"
+ENV FTP_PROXY="http://${DOCKER_PROXY_HOST}:${DOCKER_PROXY_PORT}"
 
 # set the device order to match nvidia-smi
 ENV CUDA_DEVICE_ORDER="PCI_BUS_ID"
@@ -28,12 +29,6 @@ RUN set -ex && \
     git \
     subversion \
     cmake \
-    autoconf \
-    automake \
-    libtool \
-    yasm \
-    nasm \
-    tcl \
     libx11-dev \
     libxxf86vm-dev \
     libxcursor-dev \
@@ -41,41 +36,32 @@ RUN set -ex && \
     libxrandr-dev \
     libxinerama-dev \
     libglew-dev \
-    # make deps
-    # - openal
-    libasound2-dev \
-    pulseaudio \
-    libpulse-dev \
-    # - osl
-    flex \
-    bison \
-    libbison-dev \
-    libpugixml-dev \
-    python \
-    # - ?
-    libexpat1-dev \
-    # dev
-    vim \
+    python3 \
     && \
     apt-get clean
 
-RUN mkdir ~/blender-git && cd ~/blender-git && git clone --branch v2.81a http://git.blender.org/blender.git && cd ~/blender-git/blender && git submodule init && git submodule update
+RUN mkdir /blender-git && cd /blender-git && git clone --branch blender-v2.92-release https://git.blender.org/blender.git && cd /blender-git/blender && git submodule update --init --recursive
 
-# Fix pugixml dependency
-RUN cd ~/blender-git/blender/build_files/build_environment && sed '100iinclude(cmake/pugixml.cmake)' CMakeLists.txt > CMakeLists.txt.tmp && mv CMakeLists.txt.tmp CMakeLists.txt
+# tmp: if clone through proxy failed
+# COPY blender-git /blender-git/
 
-RUN cd ~/blender-git/blender && make deps
+# let subversion create config dir
+RUN svn checkout > /dev/null 2>&1; exit 0
+# fill in proxy conf
+RUN printf "[global]\nhttp-proxy-host = ${DOCKER_PROXY_HOST}\nhttp-proxy-port = ${DOCKER_PROXY_PORT}\n" >> ~/.subversion/servers
 
-RUN mkdir ~/blender-git/build && cd ~/blender-git/build
+# precompiled library deps
+RUN mkdir /blender-git/lib && cd /blender-git/lib && svn checkout https://svn.blender.org/svnroot/bf-blender/trunk/lib/linux_centos7_x86_64
 
-RUN echo "cmake -D WITH_PYTHON_INSTALL=OFF -D WITH_AUDASPACE=OFF -D WITH_PYTHON_MODULE=ON -D WITH_CYCLES_CUDA_BINARIES=ON -D WITH_INSTALL_PORTABLE=ON ../blender" >> ~/blender-git/build/run_configure.sh && chmod +x ~/blender-git/build/run_configure.sh
+WORKDIR /blender-git/blender
+CMD ["make", "bpy"]
 
 # unset proxy
-#ENV http_proxy=""
-#ENV https_proxy=""
-#ENV ftp_proxy=""
-#ENV HTTP_PROXY=""
-#ENV HTTPS_PROXY=""
-#ENV FTP_PROXY=""
-#ENV no_proxy=""
+ENV http_proxy=""
+ENV https_proxy=""
+ENV ftp_proxy=""
+ENV HTTP_PROXY=""
+ENV HTTPS_PROXY=""
+ENV FTP_PROXY=""
+ENV no_proxy=""
 
