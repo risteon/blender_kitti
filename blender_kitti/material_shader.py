@@ -2,7 +2,8 @@
 """"""
 import typing
 
-from .bpy_helper import needs_bpy_bmesh
+import bpy
+
 from .colormap_turbo import turbo_colormap_data
 
 
@@ -363,8 +364,7 @@ def make_nodes_vertex_color_material(
     return selector
 
 
-@needs_bpy_bmesh()
-def create_or_get_material(name_material: str, *, bpy):
+def create_or_get_material(name_material: str):
     try:
         return bpy.data.materials[name_material]
     except KeyError:
@@ -397,8 +397,7 @@ def create_vertex_color_material(
     return mat, selector
 
 
-@needs_bpy_bmesh()
-def create_flow_material(name_material: str, *, bpy):
+def create_flow_material(name_material: str):
     # ### MATERIAL
     # Vertex color material
     mat = bpy.data.materials.new(name="VertexColorMaterial")

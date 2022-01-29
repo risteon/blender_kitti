@@ -4,7 +4,9 @@ import typing
 import logging
 import numpy as np
 
-from .bpy_helper import needs_bpy_bmesh
+import bpy
+import bmesh
+
 from .material_shader import (
     create_flow_material,
     create_simple_material,
@@ -23,8 +25,7 @@ handler.setLevel(logging.INFO)
 logger.addHandler(handler)
 
 
-@needs_bpy_bmesh()
-def _create_instancer_mesh(positions: np.ndarray, name="mesh_points", *, bpy):
+def _create_instancer_mesh(positions: np.ndarray, name="mesh_points"):
     """Create mesh with where each point is a pseudo face
     (three vertices at the same position.
     """
@@ -57,9 +58,8 @@ def _create_instancer_mesh(positions: np.ndarray, name="mesh_points", *, bpy):
     return mesh
 
 
-@needs_bpy_bmesh()
 def _create_instancer_obj(
-    positions: np.ndarray, name_instancer_obj: str, name_mesh: str, *, bpy
+    positions: np.ndarray, name_instancer_obj: str, name_mesh: str
 ):
     assert positions.ndim == 2 and positions.shape[1] == 3
 
@@ -85,8 +85,7 @@ def _create_instancer_obj(
     return obj_instancer
 
 
-@needs_bpy_bmesh()
-def _create_color_image(colors_rgba: np.ndarray, name: str, *, bpy):
+def _create_color_image(colors_rgba: np.ndarray, name: str):
     assert colors_rgba.ndim == 2
     # dtype and alpha channel checks
     if colors_rgba.dtype == np.float32:
@@ -153,8 +152,7 @@ def _create_particle_instancer(
     return obj_instancer, color_selector
 
 
-@needs_bpy_bmesh()
-def create_cube(name_prefix: str, *, edge_length: float = 0.16, bpy, bmesh):
+def create_cube(name_prefix: str, *, edge_length: float = 0.16):
 
     bm = bmesh.new()
     bmesh.ops.create_cube(
@@ -169,15 +167,12 @@ def create_cube(name_prefix: str, *, edge_length: float = 0.16, bpy, bmesh):
     return obj
 
 
-@needs_bpy_bmesh()
 def create_icosphere(
     name_prefix: str,
     *,
     subdivisions: int = 3,
     radius: float = 0.02,
     use_smooth: bool = True,
-    bpy,
-    bmesh,
 ):
 
     bm = bmesh.new()
@@ -367,7 +362,6 @@ def simple_scale_matrix(factor: np.array, direction: np.array):
     return scale_matrix
 
 
-@needs_bpy_bmesh()
 def add_flow_mesh(
     *,
     point_cloud: np.ndarray,
@@ -376,8 +370,6 @@ def add_flow_mesh(
     name_prefix: str = "flow",
     scene,
     mathutils,
-    bpy,
-    bmesh,
 ):
     if point_cloud.dtype != np.float32:
         print(

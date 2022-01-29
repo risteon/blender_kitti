@@ -2,11 +2,11 @@
 """"""
 
 import pathlib
-from .bpy_helper import needs_bpy_bmesh
+import bpy
+# from .bpy_helper import needs_bpy_bmesh
 
 
-@needs_bpy_bmesh()
-def clear_all(*, bpy):
+def clear_all():
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
 
@@ -20,8 +20,7 @@ def clear_all(*, bpy):
         bpy.data.collections.remove(c)
 
 
-@needs_bpy_bmesh()
-def add_light_source(scene, *, bpy):
+def add_light_source(scene):
 
     raise NotImplementedError("Implement: Add lights to given scene.")
 
@@ -58,8 +57,7 @@ def add_light_source(scene, *, bpy):
     world.light_settings.use_ambient_occlusion = True
 
 
-@needs_bpy_bmesh()
-def create_world_with_hdr_background(name: str = "world_hdr", *, bpy):
+def create_world_with_hdr_background(name: str = "world_hdr"):
     hdr_filepath = (
         pathlib.Path(__file__).parent.parent / "assets" / "ruckenkreuz_2k.hdr"
     )
@@ -91,9 +89,8 @@ def create_world_with_hdr_background(name: str = "world_hdr", *, bpy):
     return world
 
 
-@needs_bpy_bmesh()
 def create_camera_top_view_ortho(
-    name: str = "CameraTopViewOrtho", center=(0.0, 0.0), scale: float = 20.0, *, bpy
+    name: str = "CameraTopViewOrtho", center=(0.0, 0.0), scale: float = 20.0
 ):
     """top view orthographic. """
     cam = bpy.data.cameras.new(name)
@@ -106,14 +103,11 @@ def create_camera_top_view_ortho(
     return cam
 
 
-@needs_bpy_bmesh()
 def create_camera_perspective(
     location,
     rotation_quat,
     name: str = "CameraPerspective",
     focal_length: float = 50.0,
-    *,
-    bpy
 ):
     cam = bpy.data.cameras.new(name)
     cam = bpy.data.objects.new("Obj" + name, cam)
@@ -141,8 +135,7 @@ def add_cameras_default(scene):
     return cam_main, cam_top
 
 
-@needs_bpy_bmesh(default_return=None)
-def setup_scene(name: str = "blender_kitti", use_background_image: bool = True, *, bpy):
+def setup_scene(name: str = "blender_kitti", use_background_image: bool = True):
     scene = bpy.data.scenes.new(name)
     scene.render.engine = "CYCLES"
     scene.render.film_transparent = True
