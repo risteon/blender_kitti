@@ -177,7 +177,7 @@ def create_icosphere(
 
     bm = bmesh.new()
     bmesh.ops.create_icosphere(
-        bm, subdivisions=subdivisions, diameter=2.0 * radius, calc_uvs=False,
+        bm, subdivisions=subdivisions, radius=radius, calc_uvs=False,
     )
 
     mesh = bpy.data.meshes.new("{}_mesh".format(name_prefix))
