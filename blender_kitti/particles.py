@@ -11,6 +11,7 @@ from .material_shader import (
     create_flow_material,
     create_simple_material,
     create_uv_mapped_material,
+    add_nodes_to_material,
 )
 
 
@@ -129,8 +130,6 @@ def _create_particle_instancer(
     # created entities
     name_mesh = "{}_mesh".format(name_prefix)
     name_obj = "{}_obj_instancer".format(name_prefix)
-    name_image = "{}_colors".format(name_prefix)
-    name_material = "{}_material".format(name_prefix)
 
     obj_instancer = _create_instancer_obj(positions, name_obj, name_mesh)
 
@@ -138,6 +137,20 @@ def _create_particle_instancer(
     # instancing from 'fake' faces is necessary for uv mapping to work.
     obj_instancer.instance_type = "FACES"
     obj_instancer.show_instancer_for_render = False
+    return obj_instancer
+
+
+def _add_material_to_particle(name_prefix, colors, obj_particle, material=None):
+    """
+
+    :param name_prefix:
+    :param colors:
+    :param obj_particle:
+    :return:
+    """
+
+    name_image = "{}_colors".format(name_prefix)
+    name_material = "{}_material".format(name_prefix)
 
     if colors is not None:
         if isinstance(colors, np.ndarray):
@@ -148,18 +161,27 @@ def _create_particle_instancer(
             name_image = [f"{name_image}_{i}" for i in range(len(colors))]
             name_material = [f"{name_material}_{i}" for i in range(len(colors))]
 
+        color_selector = []
         for color_arr, ni, nm in zip(colors, name_image, name_material):
             image = _create_color_image(color_arr, ni)
-            # the particle obj will use this material
-            material, color_selector = create_v_mapped_material(image, nm)
-            obj_particle.data.materials.append(material)
+            if material is None:
+                # the particle obj will use this material
+                logger.info(f"Creating material {ni}.")
+                _material, _cs = create_uv_mapped_material(image, nm)
+            else:
+                # Todo (risteon) does return color link, not color selector
+                _cs = add_nodes_to_material(material, image)
+                _material = material
+
+            obj_particle.data.materials.append(_material)
+            color_selector.append(_cs)
     else:
         material, color_selector = create_simple_material(
             base_color=(0.1, 0.1, 0.1, 1.0), name_material=name_material
         )
         obj_particle.data.materials.append(material)
 
-    return obj_instancer, color_selector
+    return color_selector
 
 
 def create_cube(name_prefix: str, *, edge_length: float = 0.16):
@@ -297,16 +319,32 @@ def add_point_cloud(
     row_splits: np.ndarray = None,
     name_prefix: str = "point_cloud",
     particle_radius: float = 0.02,
+    material=None,
 ):
+    """
+
+    :param scene:
+    :param points:
+    :param colors:
+    :param reflectivity:
+    :param row_splits:
+    :param name_prefix:
+    :param particle_radius:
+    :param material: If given, just add nodes to this material
+    :return:
+    """
     # created entities
     obj_particle = create_icosphere(name_prefix + "_icosphere", radius=particle_radius)
     scene.collection.objects.link(obj_particle)
 
-    obj_point_cloud, color_selector = _create_particle_instancer(
+    obj_point_cloud = _create_particle_instancer(
         name_prefix, points, colors, obj_particle
     )
-
     scene.collection.objects.link(obj_point_cloud)
+    color_selector = _add_material_to_particle(
+        name_prefix, colors, obj_particle, material
+    )
+
     return (
         obj_point_cloud,
         {"color_selector": color_selector, "obj_particle": obj_particle},
