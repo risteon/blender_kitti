@@ -124,7 +124,6 @@ def _create_color_image(colors_rgba: np.ndarray, name: str):
 def _create_particle_instancer(
     name_prefix: str,
     positions: np.ndarray,
-    colors: typing.Union[None, np.ndarray, list[np.ndarray]],
     obj_particle,
 ):
     # created entities
@@ -231,25 +230,34 @@ def create_icosphere(
 
 
 def create_voxel_particle_obj(
-    coords: np.ndarray, colors: np.ndarray, name_prefix: str, scene
+    coords: np.ndarray,
+    colors: np.ndarray,
+    name_prefix: str,
+    scene,
+    material=None,
 ):
     obj_particle = create_cube(name_prefix + "_cube")
     scene.collection.objects.link(obj_particle)
 
     obj_voxels, color_selector = _create_particle_instancer(
-        name_prefix, coords, colors, obj_particle
+        name_prefix, coords, obj_particle
     )
     if scene is not None:
         scene.collection.objects.link(obj_voxels)
+
+    color_selector = _add_material_to_particle(
+        name_prefix, colors, obj_particle, material
+    )
     return obj_voxels, color_selector
 
 
 def add_voxels(
+    scene,
     *,
     voxels: np.ndarray,
     colors: np.ndarray = None,
     name_prefix: str = "voxels",
-    scene,
+    material=None,
 ):
     """
 
@@ -257,6 +265,7 @@ def add_voxels(
     :param colors:
     :param name_prefix:
     :param scene:
+    :param material:
     :return:
     """
     assert voxels.ndim == 3
@@ -272,7 +281,7 @@ def add_voxels(
     colors = colors[voxels]
 
     obj_voxels, color_selector = create_voxel_particle_obj(
-        coords, colors, name_prefix, scene
+        coords, colors, name_prefix, scene, material
     )
     return obj_voxels, {"color_selector": color_selector}
 
@@ -320,6 +329,7 @@ def add_point_cloud(
     name_prefix: str = "point_cloud",
     particle_radius: float = 0.02,
     material=None,
+    particle_obj=None,
 ):
     """
 
@@ -331,15 +341,19 @@ def add_point_cloud(
     :param name_prefix:
     :param particle_radius:
     :param material: If given, just add nodes to this material
+    :param particle_obj: If given, use this object
     :return:
     """
-    # created entities
-    obj_particle = create_icosphere(name_prefix + "_icosphere", radius=particle_radius)
-    scene.collection.objects.link(obj_particle)
+    if particle_obj is None:
+        # created entities
+        obj_particle = create_icosphere(
+            name_prefix + "_icosphere", radius=particle_radius
+        )
+        scene.collection.objects.link(obj_particle)
+    else:
+        obj_particle = particle_obj
 
-    obj_point_cloud = _create_particle_instancer(
-        name_prefix, points, colors, obj_particle
-    )
+    obj_point_cloud = _create_particle_instancer(name_prefix, points, obj_particle)
     scene.collection.objects.link(obj_point_cloud)
     color_selector = _add_material_to_particle(
         name_prefix, colors, obj_particle, material
