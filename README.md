@@ -6,6 +6,7 @@
 |:-------------------------:|:-------------------------:|
 | ![KITTI Point Cloud](img/blender_kitti_render_voxels_main.png?raw=true "Main view voxels") |![KITTI Point Cloud](img/blender_kitti_render_voxels_top.png?raw=true "Top view voxels") |
 | ![KITTI Scene Flow](img/blender_kitti_render_scene_flow_main.png?raw=true "Main view scene flow") |![KITTI Scene Flow](img/blender_kitti_render_scene_flow_top.png?raw=true "Top view scene flow") |
+| ![KITTI Bounding Boxes](img/blender_kitti_render_boxes_main.png?raw=true "Main view boxes") |![KITTI Bounding Boxes](img/blender_kitti_render_boxes_top.png?raw=true "Top view bounding boxes") |
 
 ## Update (2025):
 * Now uses the official `bpy` package published on PyPI. Both headless rendering and development are much more convenient.
@@ -47,10 +48,19 @@ $ ./bin/python3.11 -m pip install -e <path_to_blender_kitti>
 
 ```
 
+Render the bundled KITTI point cloud with some random bounding boxes (with random colors). This writes two image files to the `/tmp` folder.
+
+```
+$ blender --background --python-console
+
+>>> import blender_kitti_examples
+>>> blender_kitti_examples.render_kitti_bounding_boxes()
+
+
 ## Work on a scene in Blender
 
-You can import and use `blender-kitti` in the Python console inside the Blender GUIa to manipulate a scene interactively.
- 
+You can import and use `blender-kitti` in the Python console inside the Blender GUI to manipulate a scene interactively.
+
 ```
 # Create a random [Nx3] numpy array and add as point cloud to the scene.
 import bpy

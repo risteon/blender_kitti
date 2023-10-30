@@ -3,7 +3,7 @@
 __author__ = """Christoph Rist"""
 __email__ = "c.rist@posteo.de"
 
-from .particles import add_voxels, add_point_cloud, add_flow_mesh
+from .particles import add_voxels, add_point_cloud, add_flow_mesh, add_boxes
 from .scene_setup import setup_scene, add_cameras_default
 from .system_setup import setup_system
 from .object_spotlight import add_spotlight_ground
@@ -12,6 +12,7 @@ import numpy as np
 
 
 __all__ = [
+    "add_boxes",
     "add_voxels",
     "add_point_cloud",
     "add_cameras_default",
