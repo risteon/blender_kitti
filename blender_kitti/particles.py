@@ -618,3 +618,101 @@ def add_flow_mesh(
         scene.collection.objects.link(obj)
 
     return obj
+
+
+def create_cube_with_wireframe(
+    position: np.ndarray,
+    scale: np.ndarray,
+    rotation: np.ndarray,
+    wireframe_scale: float,
+    color: np.ndarray,
+):
+    # create a mesh cube
+    bpy.ops.object.select_all(action="DESELECT")
+    bpy.ops.mesh.primitive_cube_add(
+        size=1, enter_editmode=False, align="WORLD", location=position
+    )
+    cube = bpy.context.object
+
+    # set scale and rotation
+    cube.scale = scale
+    cube.rotation_euler = rotation
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+
+    # add wireframe modifier
+    bpy.ops.object.modifier_add(type="WIREFRAME")
+    wireframe_modifier = cube.modifiers[-1]
+    wireframe_modifier.thickness = wireframe_scale
+
+    # create a new material with the given color
+    material = bpy.data.materials.new(name="CubeMaterial")
+    material.use_nodes = False
+    material.diffuse_color = color
+
+    # assign the material to the cube
+    if len(cube.data.materials) > 0:
+        cube.data.materials[0] = material
+    else:
+        cube.data.materials.append(material)
+
+    return cube
+
+
+def add_boxes(
+    *,
+    scene,
+    boxes: typing.Dict[str, np.ndarray],
+    box_colors_rgba_f64: np.ndarray,
+    confidence_threshold: float = 0.0,
+    bounding_box_wire_frame_scale: float = 0.2,
+    verbose: bool = False,
+):
+    """
+    supports only boxes with yaw rotation
+
+    scene: blender py scene
+    boxes: dictionairy with
+        * 'pos': np.ndarray with shape [num_boxes, 3] (i.e. box positions in 3d)
+        * 'rot': np.ndarray with shape [num_boxes, 1] (i.e. box yaw angles)
+        * 'dims': np.ndarray with shape [num_boxes, 3] (i.e. box size length, width, height)
+        * 'probs': np.ndarray with shape [num_boxes, 1] (i.e. box confidence)
+    box_colors_rgba_f64: np.ndarray with shape [num_boxes, 4], i.e. a color for each box
+    confidence_threshold: boxes below this threshold are discarded
+    bounding_box_wire_frame_scale: this is the thickness of the box wireframe (in meters I think)
+    """
+
+    assert "pos" in boxes, "need box positions with key 'pos' to work!"
+    assert "dims" in boxes, "need box dimensions with key 'dims' to work!"
+    assert "rot" in boxes, "need box rotations (yaw angle) with key 'rot' to work!"
+
+    assert (
+        box_colors_rgba_f64 <= 1.0
+    ).all(), "this code is only tested with f64 colors <= 1.0!"
+
+    num_boxes = boxes["pos"].shape[0]
+    for box_idx in range(num_boxes):
+        box_confidence = np.squeeze(boxes["probs"][box_idx])
+        if box_confidence < confidence_threshold:
+            if verbose:
+                print(f"Discarding box #{box_idx} with confidence {box_confidence}")
+            continue
+        if verbose:
+            print(
+                f"Add box #{box_idx} at position: ",
+                boxes["pos"][box_idx],
+                ", rotation: ",
+                boxes["rot"][box_idx],
+                f", confidence: {box_confidence}",
+            )
+        cube = create_cube_with_wireframe(
+            position=boxes["pos"][box_idx],
+            scale=boxes["dims"][box_idx],
+            rotation=(
+                0.0,
+                0.0,
+                boxes["rot"][box_idx],
+            ),
+            wireframe_scale=bounding_box_wire_frame_scale,
+            color=box_colors_rgba_f64[box_idx],
+        )
+        scene.collection.objects.link(cube)

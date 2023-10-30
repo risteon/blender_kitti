@@ -12,6 +12,7 @@ import tyro
 
 
 from blender_kitti import (
+    add_boxes,
     add_point_cloud,
     add_voxels,
     setup_scene,
@@ -30,6 +31,7 @@ from .data import (
 
 
 class DemoScene(enum.StrEnum):
+    BOXES = enum.auto()
     POINT_CLOUD = enum.auto()
     VOXELS = enum.auto()
     SCENE_FLOW = enum.auto()
@@ -75,6 +77,64 @@ def add_demo_scene_flow(scene):
     flow, colors = get_pseudo_flow(point_cloud_downsample)
     _ = add_flow_mesh(
         point_cloud=point_cloud_downsample, flow=flow, colors_rgba=colors, scene=scene
+    )
+
+
+def add_demo_boxes(scene):
+    add_demo_point_cloud(scene)
+
+    boxes_gt = {
+        "pos": np.array(
+            [
+                [
+                    5.0,
+                    0.0,
+                    0.0,
+                ],
+                [
+                    5.0,
+                    10.0,
+                    0.0,
+                ],
+            ]
+        ),
+        "dims": np.array(
+            [
+                [
+                    3.0,
+                    1.0,
+                    2.0,
+                ],
+                [
+                    5.0,
+                    2.0,
+                    2.0,
+                ],
+            ]
+        ),
+        "rot": np.array(
+            [
+                [
+                    np.pi / 4,
+                ],
+                [3 * np.pi / 4],
+            ]
+        ),
+        "probs": np.ones((2, 1)),
+    }
+
+    gt_box_colors = np.array(
+        [
+            [1.0, 0.0, 0.0, 0.8],
+            [0.0, 0.0, 1.0, 0.7],
+        ],
+    )
+
+    _ = add_boxes(
+        scene=scene,
+        boxes=boxes_gt,
+        box_colors_rgba_f64=gt_box_colors,
+        confidence_threshold=0.5,
     )
 
 
@@ -128,6 +188,7 @@ def render_demo_images(
             DemoScene.POINT_CLOUD: add_demo_point_cloud,
             DemoScene.VOXELS: add_demo_voxels,
             DemoScene.SCENE_FLOW: add_demo_scene_flow,
+            DemoScene.BOXES: add_demo_boxes,
         }
         add_f[demo_scene](scene)
 
