@@ -2,7 +2,8 @@
 """"""
 import typing
 
-from .bpy_helper import needs_bpy_bmesh
+import bpy
+
 from .colormap_turbo import turbo_colormap_data
 
 
@@ -253,13 +254,10 @@ def make_nodes_simple_material(material, base_color):
     return default_output_node
 
 
-def make_nodes_uv_mapped_material(material, color_image):
+def _make_nodes_uv_mapped_material(node_tree, color_image):
     assert color_image.size[1] == 1
 
-    material.use_nodes = True
-    nodes = material.node_tree.nodes
-    nodes.clear()
-
+    nodes = node_tree.nodes
     # create uv input node
     node_uv = nodes.new(type="ShaderNodeUVMap")
     node_uv.location = 0, 0
@@ -290,7 +288,7 @@ def make_nodes_uv_mapped_material(material, color_image):
     node_text.location = 900, 0
 
     # link nodes
-    links = material.node_tree.links
+    links = node_tree.links
     links.new(node_uv.outputs[0], node_sep.inputs[0])
     links.new(node_sep.outputs[0], node_add_x.inputs[0])
     links.new(node_sep.outputs[1], node_add_y.inputs[0])
@@ -298,11 +296,28 @@ def make_nodes_uv_mapped_material(material, color_image):
     links.new(node_div_x.outputs[0], node_comb.inputs[0])
     links.new(node_add_y.outputs[0], node_comb.inputs[1])
     links.new(node_comb.outputs[0], node_text.inputs[0])
+    # return color link
+    return node_text.outputs[0]
+
+
+def make_new_nodes_material(material, color_image):
+    assert color_image.size[1] == 1
+
+    material.use_nodes = True
+    material.node_tree.nodes.clear()
+
+    color_link = _make_nodes_uv_mapped_material(material.node_tree, color_image)
 
     default_output_node = NodeOutput(
-        material.node_tree, input_color_link=node_text.outputs[0], location=(1200, 0)
+        material.node_tree, input_color_link=color_link, location=(1200, 0)
     )
     return default_output_node
+
+
+def add_nodes_to_material(material, color_image):
+    assert color_image.size[1] == 1
+    material.use_nodes = True
+    return _make_nodes_uv_mapped_material(material.node_tree, color_image)
 
 
 def make_nodes_vertex_color_material(
@@ -363,8 +378,7 @@ def make_nodes_vertex_color_material(
     return selector
 
 
-@needs_bpy_bmesh()
-def create_or_get_material(name_material: str, *, bpy):
+def create_or_get_material(name_material: str):
     try:
         return bpy.data.materials[name_material]
     except KeyError:
@@ -379,7 +393,7 @@ def create_simple_material(base_color, name_material: str):
 
 def create_uv_mapped_material(color_image, name_material: str = "material_point_cloud"):
     mat = create_or_get_material(name_material)
-    color_selector = make_nodes_uv_mapped_material(mat, color_image)
+    color_selector = make_new_nodes_material(mat, color_image)
     return mat, color_selector
 
 
@@ -397,8 +411,7 @@ def create_vertex_color_material(
     return mat, selector
 
 
-@needs_bpy_bmesh()
-def create_flow_material(name_material: str, *, bpy):
+def create_flow_material(name_material: str):
     # ### MATERIAL
     # Vertex color material
     mat = bpy.data.materials.new(name="VertexColorMaterial")
