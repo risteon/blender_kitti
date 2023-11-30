@@ -6,6 +6,7 @@
 |:-------------------------:|:-------------------------:|
 | ![KITTI Point Cloud](img/blender_kitti_render_voxels_main.png?raw=true "Main view voxels") |![KITTI Point Cloud](img/blender_kitti_render_voxels_top.png?raw=true "Top view voxels") |
 | ![KITTI Scene Flow](img/blender_kitti_render_scene_flow_main.png?raw=true "Main view scene flow") |![KITTI Scene Flow](img/blender_kitti_render_scene_flow_top.png?raw=true "Top view scene flow") |
+| ![KITTI Bounding Boxes](img/blender_kitti_render_boxes_main.png?raw=true "Main view boxes") |![KITTI Bounding Boxes](img/blender_kitti_render_boxes_top.png?raw=true "Top view bounding boxes") |
 
 ## About
 
@@ -17,9 +18,9 @@ and all colors have the exact RGB-value as specified. All particles can be color
 * Performance of the scrips is acceptable. It should not take much longer than a second to create a 100k point cloud.
 
 Together, these qualities enable `blender-kitti` to render large scale data from the KITTI dataset
-(hence the name) or related datasets. 
+(hence the name) or related datasets.
 
-When it comes to visualization, everyone has a different usecase. So this is not a 
+When it comes to visualization, everyone has a different usecase. So this is not a
 one-fits-all solution but rather a collection of techniques that can be adapted
 to individual usecases.
 
@@ -70,11 +71,20 @@ $ blender --background --python-console
 >>> blender_kitti_examples.render_kitti_scene_flow()
 ```
 
+Render the bundled KITTI point cloud with some random bounding boxes (with random colors). This writes two image files to the `/tmp` folder.
+
+```
+$ blender --background --python-console
+
+>>> import blender_kitti_examples
+>>> blender_kitti_examples.render_kitti_bounding_boxes()
+
+
 ## Work on a scene in Blender
 
 You can import and use `blender-kitti` in the python console window in the Blender-GUI
 itself to work on a given scene.
- 
+
 ```
 # Create a random [Nx3] numpy array and add as point cloud to a scene in blender.
 import bpy

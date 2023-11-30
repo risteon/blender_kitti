@@ -5,6 +5,7 @@ import pathlib
 import numpy as np
 from blender_kitti.bpy_helper import needs_bpy_bmesh
 from blender_kitti import (
+    add_boxes,
     add_point_cloud,
     add_voxels,
     setup_scene,
@@ -20,6 +21,7 @@ from .data import (
     get_semantic_kitti_voxels,
     get_pseudo_flow,
 )
+import bpy
 
 
 def dry_render(_scene, cameras, output_path):
@@ -57,11 +59,10 @@ def render(scene, cameras, output_path, *, bpy):
 
 
 def render_kitti_point_cloud(gpu_compute=False):
-
     scene = setup_scene()
     cameras = add_cameras_default(scene)
 
-    scene.view_layers["View Layer"].cycles.use_denoising = True
+    scene.view_layers["ViewLayer"].cycles.use_denoising = True
     scene.render.resolution_percentage = 100
     scene.render.resolution_x = 640
     scene.render.resolution_y = 480
@@ -75,16 +76,14 @@ def render_kitti_point_cloud(gpu_compute=False):
 
     point_cloud, colors = get_semantic_kitti_point_cloud()
     _ = add_point_cloud(points=point_cloud, colors=colors, scene=scene)
-    render(scene, cameras, "/tmp/blender_kitti_render_point_cloud_{}.png")
+    render(scene, cameras, "/tmp/blender_kitti_render_point_cloud_{}.png", bpy=bpy)
 
 
 def render_kitti_scene_flow(gpu_compute=False):
-
     scene = setup_scene()
     cameras = add_cameras_default(scene)
 
-    scene.view_layers["View Layer"].cycles.use_denoising = False
-    scene.view_layers["View Layer"].cycles.use_denoising = True
+    scene.view_layers["ViewLayer"].cycles.use_denoising = True
     scene.render.resolution_percentage = 100
     scene.render.resolution_x = 640
     scene.render.resolution_y = 480
@@ -113,8 +112,119 @@ def render_kitti_scene_flow(gpu_compute=False):
     render(scene, cameras, "/tmp/blender_kitti_render_scene_flow_{}.png")
 
 
-def render_kitti_voxels(gpu_compute=False):
+def render_kitti_bounding_boxes(gpu_compute=True):
+    scene = setup_scene()
+    cameras = add_cameras_default(scene)
+    scene.view_layers["ViewLayer"].cycles.use_denoising = True
+    scene.render.resolution_percentage = 100
+    scene.render.resolution_x = 1280
+    scene.render.resolution_y = 1024
+    # alpha background
+    scene.render.film_transparent = True
+    #
+    if gpu_compute:
+        scene.cycles.device = "GPU"
+    else:
+        scene.cycles.device = "CPU"
 
+    point_cloud, colors = get_semantic_kitti_point_cloud()
+    _ = add_point_cloud(points=point_cloud, colors=colors, scene=scene)
+
+    box_range_max = point_cloud.max(axis=0) / 2
+    box_range_min = point_cloud.min(axis=0) / 2
+    print(f"Create random boxes in range {box_range_min} - {box_range_max}")
+    num_pred_boxes = 20
+    num_gt_boxes = 10
+
+    max_box_dims = np.array([7.0, 3.0, 2.0])
+
+    # random boxes
+    boxes_pred = {
+        "pos": box_range_min[None, ...]
+        + np.random.rand(num_pred_boxes, 3)
+        * (box_range_max - box_range_min)[None, ...],
+        "dims": 1 + np.random.rand(num_pred_boxes, 3) * max_box_dims[None, ...],
+        "rot": 2 * np.pi * np.random.rand(num_pred_boxes, 1),
+        "probs": np.random.rand(num_pred_boxes, 1),
+    }
+
+    pred_box_colors = np.random.rand(boxes_pred["pos"].shape[0], 4)
+    pred_box_colors[:, -1] = 1.0
+
+    _ = add_boxes(
+        scene=scene,
+        boxes=boxes_pred,
+        box_colors_rgba_f64=pred_box_colors,
+        confidence_threshold=0.3,
+        verbose=True,
+    )
+
+    boxes_gt = {
+        "pos": box_range_min[None, ...]
+        + np.random.rand(num_gt_boxes, 3) * (box_range_max - box_range_min)[None, ...],
+        "dims": np.random.rand(num_gt_boxes, 3) * max_box_dims[None, ...],
+        "rot": 2 * np.pi * np.random.rand(num_gt_boxes, 1),
+        "probs": np.ones((num_gt_boxes, 1)),
+    }
+
+    boxes_gt = {
+        "pos": np.array(
+            [
+                [
+                    5.0,
+                    0.0,
+                    0.0,
+                ],
+                [
+                    5.0,
+                    10.0,
+                    0.0,
+                ],
+            ]
+        ),
+        "dims": np.array(
+            [
+                [
+                    3.0,
+                    1.0,
+                    2.0,
+                ],
+                [
+                    5.0,
+                    2.0,
+                    2.0,
+                ],
+            ]
+        ),
+        "rot": np.array(
+            [
+                [
+                    np.pi / 4,
+                ],
+                [3 * np.pi / 4],
+            ]
+        ),
+        "probs": np.ones((2, 1)),
+    }
+
+    gt_box_colors = np.ones((boxes_gt["pos"].shape[0], 4)) * np.array(
+        [
+            [1.0, 0.0, 0.0, 1.0],
+        ]
+    )
+
+    _ = add_boxes(
+        scene=scene,
+        boxes=boxes_gt,
+        box_colors_rgba_f64=gt_box_colors,
+        confidence_threshold=0.3,
+        verbose=True,
+    )
+
+    render(scene, cameras, "/tmp/blender_kitti_render_boxes_{}.png", bpy=bpy)
+
+
+def render_kitti_voxels(gpu_compute=False):
     scene = setup_scene()
     cam_main = create_camera_perspective(
         location=(2.86, 17.52, 3.74),
@@ -128,7 +238,7 @@ def render_kitti_voxels(gpu_compute=False):
     scene.collection.objects.link(cam_top)
     scene.camera = cam_main
 
-    scene.view_layers["View Layer"].cycles.use_denoising = True
+    scene.view_layers["ViewLayer"].cycles.use_denoising = True
     scene.render.resolution_percentage = 100
     scene.render.resolution_x = 640
     scene.render.resolution_y = 480
