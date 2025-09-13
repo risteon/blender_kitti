@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "blender_kitti"
+version = "0.3.0"
+authors = [{name = "Christoph Rist", email = "c.rist@posteo.de"}]
+license = {text = "MIT"}
+description = "Render large pointclouds and voxel grids in Blender."
+urls = {Homepage = "http://github.com/risteon/blender_kitti"}
+requires-python = ">=3.11"
+dependencies = [
+    "ruamel.yaml",
+    "click",
+    "numpy",
+    "decorator",
+    "bpy>=4.5.3",
+]
+
+[project.scripts]
+blender_kitti_render = "blender_kitti.cli:render"
+
+[tool.setuptools]
+packages = ["blender_kitti", "blender_kitti_examples"]
+zip-safe = false
+include-package-data = false
