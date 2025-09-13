@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 """"""
 
-import typing
 import logging
-import numpy as np
+import typing
 
 import bpy
 import bmesh
+import mathutils
+import numpy as np
 
 from .material_shader import (
     create_flow_material,
@@ -238,9 +239,7 @@ def create_voxel_particle_obj(
     obj_particle = create_cube(name_prefix + "_cube")
     scene.collection.objects.link(obj_particle)
 
-    obj_voxels, color_selector = _create_particle_instancer(
-        name_prefix, coords, obj_particle
-    )
+    obj_voxels = _create_particle_instancer(name_prefix, coords, obj_particle)
     if scene is not None:
         scene.collection.objects.link(obj_voxels)
 
@@ -439,7 +438,6 @@ def add_flow_mesh(
     arrow_head_height: float = 0.2,
     arrow_head_diameter: float = 0.15,
     scene,
-    mathutils,
 ):
     if point_cloud.dtype != np.float32:
         print(

@@ -1,10 +1,15 @@
 # -*- coding: utf-8 -*-
 """Example renders of point cloud and voxels"""
 
+from dataclasses import dataclass
+import enum
 import pathlib
+import typing
 
 import bpy
 import numpy as np
+import tyro
+
 
 from blender_kitti import (
     add_point_cloud,
@@ -24,63 +29,39 @@ from .data import (
 )
 
 
-def render(scene, cameras, output_path):
-    for cam in cameras:
-        if isinstance(output_path, str):
-            p = output_path.format(cam.data.name)
-        elif isinstance(output_path, pathlib.Path):
-            p = output_path / (cam.data.name + ".png")
-        elif callable(output_path):
-            p = output_path(cam.data.name)
-        else:
-            raise ValueError(
-                "Cannot handle output path type {}".format(type(output_path))
-            )
+class DemoScene(enum.StrEnum):
+    POINT_CLOUD = enum.auto()
+    VOXELS = enum.auto()
+    SCENE_FLOW = enum.auto()
+    ALL = enum.auto()
 
+
+@dataclass
+class Args:
+    demo_scene: tyro.conf.Positional[tyro.conf.EnumChoicesFromValues[DemoScene]]
+    """Select the demo scene to render."""
+
+    use_gpu: bool = False
+    """Set to true to enable GPU usage for rendering"""
+
+    output_path: pathlib.Path = pathlib.Path(__file__).parent / "img"
+    """"""
+
+
+def render(scene, cameras, output_path, scene_name):
+    for cam in cameras:
+        p = output_path / f"blender_kitti_demo_{scene_name}_{cam.data.name}.png"
         scene.camera = cam
-        scene.render.filepath = p
+        scene.render.filepath = str(p)
         bpy.ops.render.render(write_still=True, scene=scene.name)
 
 
-def render_kitti_point_cloud(gpu_compute=False):
-    scene = setup_scene()
-    cameras = add_cameras_default(scene)
-
-    # there should be a single view layer available
-    scene.view_layers[0].cycles.use_denoising = True
-    scene.render.resolution_percentage = 100
-    scene.render.resolution_x = 640
-    scene.render.resolution_y = 480
-    # alpha background
-    scene.render.film_transparent = True
-    #
-    if gpu_compute:
-        scene.cycles.device = "GPU"
-    else:
-        scene.cycles.device = "CPU"
-
+def add_demo_point_cloud(scene) -> None:
     point_cloud, colors = get_semantic_kitti_point_cloud()
     _ = add_point_cloud(points=point_cloud, colors=colors, scene=scene)
-    render(scene, cameras, "/tmp/blender_kitti_render_point_cloud_{}.png")
 
 
-def render_kitti_scene_flow(gpu_compute=False):
-    scene = setup_scene()
-    cameras = add_cameras_default(scene)
-
-    # there should be a single view layer available
-    scene.view_layers[0].cycles.use_denoising = True
-    scene.render.resolution_percentage = 100
-    scene.render.resolution_x = 640
-    scene.render.resolution_y = 480
-    # alpha background
-    scene.render.film_transparent = True
-    #
-    if gpu_compute:
-        scene.cycles.device = "GPU"
-    else:
-        scene.cycles.device = "CPU"
-
+def add_demo_scene_flow(scene):
     # reduce number of points, especially near vehicle
     point_cloud, _ = get_semantic_kitti_point_cloud()
     num_pts = 6000
@@ -95,11 +76,9 @@ def render_kitti_scene_flow(gpu_compute=False):
     _ = add_flow_mesh(
         point_cloud=point_cloud_downsample, flow=flow, colors_rgba=colors, scene=scene
     )
-    render(scene, cameras, "/tmp/blender_kitti_render_scene_flow_{}.png")
 
 
-def render_kitti_voxels(gpu_compute=False):
-    scene = setup_scene()
+def add_cameras_voxels(scene):
     cam_main = create_camera_perspective(
         location=(2.86, 17.52, 3.74),
         rotation_quat=(0.749, 0.620, -0.150, -0.181),
@@ -111,19 +90,61 @@ def render_kitti_voxels(gpu_compute=False):
     )
     scene.collection.objects.link(cam_top)
     scene.camera = cam_main
+    return [cam_main, cam_top]
 
-    scene.view_layers["View Layer"].cycles.use_denoising = True
-    scene.render.resolution_percentage = 100
-    scene.render.resolution_x = 640
-    scene.render.resolution_y = 480
-    # alpha background
-    scene.render.film_transparent = True
-    #
-    if gpu_compute:
-        scene.cycles.device = "GPU"
-    else:
-        scene.cycles.device = "CPU"
 
+def add_demo_voxels(scene):
     voxels, colors = get_semantic_kitti_voxels()
     _ = add_voxels(voxels=voxels, colors=colors, scene=scene)
-    render(scene, [cam_top, cam_main], "/tmp/blender_kitti_render_voxels_{}.png")
+
+
+def render_demo_images(
+    demo_scenes: typing.List[DemoScene], output_path: pathlib.Path, use_gpu: bool
+) -> None:
+    for demo_scene in demo_scenes:
+        if demo_scene == DemoScene.ALL:
+            continue
+
+        scene = setup_scene(name=f"demo_{str(demo_scene)}")
+        if demo_scene == DemoScene.VOXELS:
+            cameras = add_cameras_voxels(scene)
+        else:
+            cameras = add_cameras_default(scene)
+
+        # there should be a single view layer available
+        scene.view_layers[0].cycles.use_denoising = True
+        scene.render.resolution_percentage = 100
+        scene.render.resolution_x = 640
+        scene.render.resolution_y = 480
+        # alpha background
+        scene.render.film_transparent = True
+        #
+        if use_gpu:
+            scene.cycles.device = "GPU"
+        else:
+            scene.cycles.device = "CPU"
+
+        add_f = {
+            DemoScene.POINT_CLOUD: add_demo_point_cloud,
+            DemoScene.VOXELS: add_demo_voxels,
+            DemoScene.SCENE_FLOW: add_demo_scene_flow,
+        }
+        add_f[demo_scene](scene)
+
+        render(scene, cameras, output_path, str(demo_scene))
+
+
+def main() -> None:
+    args = tyro.cli(Args)
+    args.output_path.mkdir(exist_ok=True)
+
+    if args.demo_scene == DemoScene.ALL:
+        demo_scenes = list(DemoScene)
+    else:
+        demo_scenes = [args.demo_scene]
+
+    render_demo_images(demo_scenes, args.output_path, args.use_gpu)
+
+
+if __name__ == "__main__":
+    main()

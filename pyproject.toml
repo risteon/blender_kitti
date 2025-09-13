@@ -16,10 +16,12 @@ dependencies = [
     "numpy",
     "decorator",
     "bpy>=4.5.3",
+    "tyro>=0.9.31",
 ]
 
 [project.scripts]
 blender_kitti_render = "blender_kitti.cli:render"
+blender_kitti_render_demo = "blender_kitti_examples.example_render_kitti:main"
 
 [tool.setuptools]
 packages = ["blender_kitti", "blender_kitti_examples"]
