@@ -22,6 +22,16 @@ This project has two goals:
 These properties make `blender-kitti` useful for rendering large-scale datasets such as KITTI (hence the name) and similar data. This repository is intentionally a toolbox of techniques rather than a one-size-fits-all visualization package. You will probably need to adapt the snippets to your use case.
 There are example scripts that reproduce the demo images. use them to verify your installation and as a starting point for changes.
 
+## Render demo images
+
+You can use `uv` to run the blender kitti examples script.
+By default, output images are created in `blender_kitti_examples/img/`.
+```
+uv run blender_kitti_render_demo point_cloud
+uv run blender_kitti_render_demo voxels
+uv run blender_kitti_render_demo scene_flow
+```
+
 ## Installation into Blender's bundled Python
 If you want to work interactively inside Blender's GUI, install the package into Blender's bundled Python virtualenv.
 ```
@@ -35,37 +45,6 @@ $ ./bin/python3.11 lib/python3.11/ensurepip
 # Install the package in editable mode
 $ ./bin/python3.11 -m pip install -e <path_to_blender_kitti>
 
-```
-
-## Render demo images
-
-Render the bundled KITTI point cloud with semantic coloring from two camera perspectives.
-Two image files are written to `/tmp`.
-
-```
-$ blender --background --python-console
-
->>> import blender_kitti_examples
->>> blender_kitti_examples.render_kitti_point_cloud()
-```
-
-Render the bundled Semantic KITTI voxel grid as top view and close-up image.
-Two image files are written to `/tmp`.
-```
-$ blender --background --python-console
-
->>> import blender_kitti_examples
->>> blender_kitti_examples.render_kitti_voxels()
-```
-
-Render the bundled KITTI point cloud with pseudo odometry for HSV colored scene flow from two camera perspectives.
-Two image files are written to `/tmp`.
-
-```
-$ blender --background --python-console
-
->>> import blender_kitti_examples
->>> blender_kitti_examples.render_kitti_scene_flow()
 ```
 
 ## Work on a scene in Blender
