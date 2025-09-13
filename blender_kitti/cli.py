@@ -1,14 +1,12 @@
 #!/bin/env python
 # -*- coding: utf-8 -*-
-"""
-
-"""
+""" """
 
 import click
 import logging
 import typing
-import pathlib
 
+import bpy
 from ruamel.yaml import YAML
 
 from .blender_kitti import (
@@ -18,7 +16,6 @@ from .blender_kitti import (
 )
 from .system_setup import setup_system
 from .scene_setup import add_cameras_default
-from .bpy_helper import needs_bpy_bmesh
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -48,7 +45,6 @@ def process_file(filename: str, scene=None):
 
 
 def make_scene_from_data_files(render_config: typing.Union[str, None], filenames):
-
     if render_config is not None:
         yaml = YAML(typ="safe")
         config = yaml.load(render_config)
@@ -88,8 +84,7 @@ def make_scene_from_data_files(render_config: typing.Union[str, None], filenames
     return scene, config
 
 
-@needs_bpy_bmesh(default_return=None)
-def render_scene(*, bpy):
+def render_scene():
     bpy.ops.render.render(write_still=True)
 
 
@@ -101,9 +96,7 @@ def render_scene(*, bpy):
 @click.option("--render_config", default=None)
 @click.argument("filenames", type=click.Path(exists=True), nargs=-1)
 def render(python, background, render_config: typing.Union[str, None], filenames):
-    """
-
-    """
+    """ """
     scene, config = make_scene_from_data_files(render_config, filenames)
     add_cameras_default(scene)
 

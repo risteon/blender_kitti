@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """"""
+
 import typing
 import logging
 import numpy as np
@@ -184,7 +185,6 @@ def _add_material_to_particle(name_prefix, colors, obj_particle, material=None):
 
 
 def create_cube(name_prefix: str, *, edge_length: float = 0.16):
-
     bm = bmesh.new()
     bmesh.ops.create_cube(
         bm,
@@ -207,7 +207,6 @@ def create_icosphere(
     radius: float = 0.02,
     use_smooth: bool = True,
 ):
-
     bm = bmesh.new()
     bmesh.ops.create_icosphere(
         bm,
@@ -222,7 +221,7 @@ def create_icosphere(
 
     mesh.polygons.foreach_set(
         "use_smooth",
-        np.full(fill_value=use_smooth, shape=[len(mesh.polygons)], dtype=np.bool),
+        np.full(fill_value=use_smooth, shape=[len(mesh.polygons)], dtype=bool),
     )
 
     obj = bpy.data.objects.new("{}_obj".format(name_prefix), mesh)
@@ -269,7 +268,7 @@ def add_voxels(
     :return:
     """
     assert voxels.ndim == 3
-    assert voxels.dtype == np.bool
+    assert voxels.dtype == bool
 
     dtype = np.float32
     deltas = np.asarray([0.2, 0.2, 0.2], dtype=dtype)
@@ -418,7 +417,7 @@ def bmesh_join(list_of_bmeshes, list_of_matrices, *, normal_update=False, bmesh)
 
 
 def simple_scale_matrix(factor: np.array, direction: np.array):
-    dir_len = np.sqrt(np.sum(direction ** 2))
+    dir_len = np.sqrt(np.sum(direction**2))
     assert dir_len > 0.0, "direction vector of scale matrix may not have length zero"
     normalized_dir = direction / dir_len
     factor = 1.0 - factor
@@ -544,7 +543,7 @@ def add_flow_mesh(
 
         flow_vec = flow[flow_vec_idx]
 
-        flow_vec_unit = flow_vec / np.sqrt(np.sum(flow_vec ** 2))
+        flow_vec_unit = flow_vec / np.sqrt(np.sum(flow_vec**2))
 
         # rotation matrix R that rotates unit vector a onto unit vector b.
         v = np.cross(arrow_head_unit, flow_vec_unit)

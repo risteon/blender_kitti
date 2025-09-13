@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
-"""
+""" """
 
-"""
+import bmesh
+import bpy
 
-from .bpy_helper import needs_bpy_bmesh
 
-
-@needs_bpy_bmesh()
-def _create_ground_material(name: str = "ground_material", *, bpy):
+def _create_ground_material(name: str = "ground_material"):
     if name in bpy.data.materials:
         raise RuntimeError("Material '{}' already exists".format(name))
 
@@ -70,8 +68,7 @@ def _create_ground_material(name: str = "ground_material", *, bpy):
     return mat
 
 
-@needs_bpy_bmesh()
-def create_ground(name_prefix: str = "ground", *, bpy, bmesh):
+def create_ground(name_prefix: str = "ground"):
     diameter: float = 10.0
     height: float = 0.1
     bm = bmesh.new()
@@ -96,8 +93,7 @@ def create_ground(name_prefix: str = "ground", *, bpy, bmesh):
     return obj
 
 
-@needs_bpy_bmesh()
-def add_spotlight_ground(scene=None, name_prefix: str = "spotlight", *, bpy):
+def add_spotlight_ground(scene=None, name_prefix: str = "spotlight"):
     if scene is None:
         scene = bpy.context.scene
 

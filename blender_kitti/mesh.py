@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """"""
+
+import bpy
 import numpy as np
 
-from .bpy_helper import needs_bpy_bmesh
 from .material_shader import create_vertex_color_material
 
 
-@needs_bpy_bmesh(run_anyway=True)
 def create_mesh(
     vertices: np.ndarray,
     triangles: np.ndarray,
@@ -16,7 +16,6 @@ def create_mesh(
     use_smooth: bool = True,
     *,
     name: str,
-    bpy,
 ):
     assert vertices.ndim == 2 and vertices.shape[1] == 3
     assert triangles.ndim == 2 and triangles.shape[1] == 3
@@ -54,7 +53,7 @@ def create_mesh(
     mesh.polygons.foreach_set("loop_total", loop_total)
     mesh.polygons.foreach_set(
         "use_smooth",
-        np.full(fill_value=use_smooth, shape=[len(mesh.polygons)], dtype=np.bool),
+        np.full(fill_value=use_smooth, shape=[len(mesh.polygons)], dtype=bool),
     )
 
     attr_keys_rgb = set()
@@ -109,7 +108,6 @@ def add_vertex_color_layers_from_face_colors(
 def add_vertex_color_layers(
     mesh, vertex_indices, vertex_colors: {str: np.ndarray}
 ) -> {str}:
-
     vertex_attr_keys = set()
     for vcolor_name, vcolors in vertex_colors.items():
         if (
@@ -175,7 +173,6 @@ def add_vertex_colors_from_scalar(
     return vertex_attr_keys
 
 
-@needs_bpy_bmesh(run_anyway=True)
 def create_obj_from_mesh(
     vertices: np.ndarray,
     triangles: np.ndarray,
@@ -184,9 +181,7 @@ def create_obj_from_mesh(
     scalar_values: {str: np.ndarray} = None,
     *,
     name_prefix: str,
-    bpy,
 ):
-
     obj_name = "{}_obj".format(name_prefix)
     try:
         if obj_name in bpy.data.objects:

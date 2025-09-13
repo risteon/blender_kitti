@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """"""
+
 import colorsys
 import pathlib
 import numpy as np
@@ -8,7 +9,7 @@ from ruamel.yaml import YAML
 
 def unpack(compressed: np.ndarray):
     assert compressed.ndim == 1
-    uncompressed = np.zeros(compressed.shape[0] * 8, dtype=np.bool)
+    uncompressed = np.zeros(compressed.shape[0] * 8, dtype=bool)
     for b in range(8):
         uncompressed[b::8] = compressed >> (7 - b) & 1
     return uncompressed
@@ -81,7 +82,6 @@ def get_semantic_kitti_voxels():
 
 
 def get_semantic_kitti_point_cloud():
-
     file_point_cloud = (
         pathlib.Path(__file__).parent.parent
         / "data"
@@ -126,7 +126,6 @@ def get_semantic_kitti_point_cloud():
 
 
 def get_pseudo_flow(point_cloud):
-
     points_homog = np.concatenate(
         [point_cloud, np.ones((point_cloud.shape[0], 1))], axis=-1
     )

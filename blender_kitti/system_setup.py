@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 """"""
 
-from .bpy_helper import needs_bpy_bmesh
+import bpy
 
 
-@needs_bpy_bmesh()
-def enable_cycles_render_devices(*, bpy):
+def enable_cycles_render_devices():
     # setup render devices. Use all.
     cycles_prefs = bpy.context.preferences.addons["cycles"].preferences
     cycles_prefs.compute_device_type = "CUDA"
@@ -20,8 +19,7 @@ def enable_cycles_render_devices(*, bpy):
         device.use = True
 
 
-@needs_bpy_bmesh()
-def setup_system(enable_gpu_rendering: bool = True, scene=None, *, bpy):
+def setup_system(enable_gpu_rendering: bool = True, scene=None):
     if enable_gpu_rendering:
         enable_cycles_render_devices()
         if scene is None:

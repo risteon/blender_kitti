@@ -2,8 +2,10 @@
 """Example renders of point cloud and voxels"""
 
 import pathlib
+
+import bpy
 import numpy as np
-from blender_kitti.bpy_helper import needs_bpy_bmesh
+
 from blender_kitti import (
     add_point_cloud,
     add_voxels,
@@ -22,23 +24,7 @@ from .data import (
 )
 
 
-def dry_render(_scene, cameras, output_path):
-    for cam in cameras:
-        if isinstance(output_path, str):
-            p = output_path.format(cam.data.name)
-        elif isinstance(output_path, pathlib.Path):
-            p = output_path / (cam.data.name + ".png")
-        elif callable(output_path):
-            p = output_path(cam.data.name)
-        else:
-            raise ValueError(
-                "Cannot handle output path type {}".format(type(output_path))
-            )
-        print("Render camera {} to file path {}.".format(cam.data.name, p))
-
-
-@needs_bpy_bmesh(alternative_func=dry_render)
-def render(scene, cameras, output_path, *, bpy):
+def render(scene, cameras, output_path):
     for cam in cameras:
         if isinstance(output_path, str):
             p = output_path.format(cam.data.name)
@@ -57,11 +43,11 @@ def render(scene, cameras, output_path, *, bpy):
 
 
 def render_kitti_point_cloud(gpu_compute=False):
-
     scene = setup_scene()
     cameras = add_cameras_default(scene)
 
-    scene.view_layers["View Layer"].cycles.use_denoising = True
+    # there should be a single view layer available
+    scene.view_layers[0].cycles.use_denoising = True
     scene.render.resolution_percentage = 100
     scene.render.resolution_x = 640
     scene.render.resolution_y = 480
@@ -79,12 +65,11 @@ def render_kitti_point_cloud(gpu_compute=False):
 
 
 def render_kitti_scene_flow(gpu_compute=False):
-
     scene = setup_scene()
     cameras = add_cameras_default(scene)
 
-    scene.view_layers["View Layer"].cycles.use_denoising = False
-    scene.view_layers["View Layer"].cycles.use_denoising = True
+    # there should be a single view layer available
+    scene.view_layers[0].cycles.use_denoising = True
     scene.render.resolution_percentage = 100
     scene.render.resolution_x = 640
     scene.render.resolution_y = 480
@@ -114,7 +99,6 @@ def render_kitti_scene_flow(gpu_compute=False):
 
 
 def render_kitti_voxels(gpu_compute=False):
-
     scene = setup_scene()
     cam_main = create_camera_perspective(
         location=(2.86, 17.52, 3.74),

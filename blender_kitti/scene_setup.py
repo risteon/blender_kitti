@@ -3,7 +3,6 @@
 
 import pathlib
 import bpy
-# from .bpy_helper import needs_bpy_bmesh
 
 
 def clear_all():
@@ -21,7 +20,6 @@ def clear_all():
 
 
 def add_light_source(scene):
-
     raise NotImplementedError("Implement: Add lights to given scene.")
 
     bpy.ops.mesh.primitive_plane_add()
@@ -92,7 +90,7 @@ def create_world_with_hdr_background(name: str = "world_hdr"):
 def create_camera_top_view_ortho(
     name: str = "CameraTopViewOrtho", center=(0.0, 0.0), scale: float = 20.0
 ):
-    """top view orthographic. """
+    """top view orthographic."""
     cam = bpy.data.cameras.new(name)
     cam = bpy.data.objects.new("Obj" + name, cam)
     cam.location = center + (45.0,)
@@ -120,7 +118,7 @@ def create_camera_perspective(
 
 
 def add_cameras_default(scene):
-    """ Make two camera (main/top) default setup for demo images."""
+    """Make two camera (main/top) default setup for demo images."""
     cam_main = create_camera_perspective(
         location=(-33.3056, 24.1123, 26.0909),
         rotation_quat=(0.42119, 0.21272, -0.39741, -0.78703),
