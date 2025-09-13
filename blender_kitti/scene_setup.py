@@ -138,7 +138,8 @@ def setup_scene(name: str = "blender_kitti", use_background_image: bool = True):
     scene.render.engine = "CYCLES"
     scene.render.film_transparent = True
 
-    # clear_all()
+    scene.cycles.samples = 128
+    scene.view_settings.view_transform = "Standard"
 
     if use_background_image:
         scene.world = create_world_with_hdr_background()
