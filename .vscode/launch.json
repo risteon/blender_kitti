@@ -1,0 +1,49 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Debug Tests (use Just My Code)",
+            "type": "debugpy",
+            "request": "launch",
+            "purpose": [
+                "debug-test"
+            ],
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "example_render_kitti point_cloud",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "blender_kitti_examples.example_render_kitti",
+            "console": "integratedTerminal",
+            "args": [
+                "point_cloud",
+            ],
+            "justMyCode": false
+        },
+        {
+            "name": "example_render_kitti scene_flow",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "blender_kitti_examples.example_render_kitti",
+            "console": "integratedTerminal",
+            "args": [
+                "scene_flow",
+            ],
+            "justMyCode": false
+        },
+        {
+            "name": "example_render_kitti voxels",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "blender_kitti_examples.example_render_kitti",
+            "console": "integratedTerminal",
+            "args": [
+                "voxels",
+            ],
+            "justMyCode": false
+        }
+    ]
+}
