@@ -58,9 +58,11 @@ def render(scene, cameras, output_path, scene_name):
         bpy.ops.render.render(write_still=True, scene=scene.name)
 
 
-def add_demo_point_cloud(scene) -> None:
+def add_demo_point_cloud(scene, pcl_instancer_prefix="") -> None:
     point_cloud, colors = get_semantic_kitti_point_cloud()
-    _ = add_point_cloud(points=point_cloud, colors=colors, scene=scene)
+    _ = add_point_cloud(
+        points=point_cloud, colors=colors, scene=scene, name_prefix=pcl_instancer_prefix
+    )
 
 
 def add_demo_scene_flow(scene):
@@ -81,59 +83,43 @@ def add_demo_scene_flow(scene):
 
 
 def add_demo_boxes(scene):
-    add_demo_point_cloud(scene)
+    np.random.seed(1)
 
-    boxes_gt = {
-        "pos": np.array(
-            [
-                [
-                    5.0,
-                    0.0,
-                    0.0,
-                ],
-                [
-                    5.0,
-                    10.0,
-                    0.0,
-                ],
-            ]
-        ),
-        "dims": np.array(
-            [
-                [
-                    3.0,
-                    1.0,
-                    2.0,
-                ],
-                [
-                    5.0,
-                    2.0,
-                    2.0,
-                ],
-            ]
-        ),
-        "rot": np.array(
-            [
-                [
-                    np.pi / 4,
-                ],
-                [3 * np.pi / 4],
-            ]
-        ),
-        "probs": np.ones((2, 1)),
+    # Need different pcl_instancer_prefix, otherwise:
+    # RuntimeError: Object 'point_cloud_obj_instancer' already exists.
+    add_demo_point_cloud(scene, pcl_instancer_prefix="boxes")
+
+    num_boxes = 20
+    box_range_max = np.array([20.0, 20.0, 1.0])
+    box_range_min = -box_range_max
+
+    max_box_dims = np.array([7.0, 3.0, 2.0])
+    min_box_dims = np.array([1.0, 1.0, 1.0])
+
+    # random boxes
+    boxes = {
+        "pos": box_range_min[None, ...]
+        + np.random.rand(num_boxes, 3) * (box_range_max - box_range_min)[None, ...],
+        "dims": min_box_dims[None, ...]
+        + np.random.rand(num_boxes, 3) * (max_box_dims - min_box_dims)[None, ...],
+        "rot": 2 * np.pi * np.random.rand(num_boxes, 1),
+        "probs": np.random.rand(num_boxes, 1),
     }
 
-    gt_box_colors = np.array(
+    base_colors = np.array(
         [
             [1.0, 0.0, 0.0, 0.8],
-            [0.0, 0.0, 1.0, 0.7],
-        ],
+            [0.0, 1.0, 0.0, 0.8],
+            [0.0, 0.0, 1.0, 0.8],
+        ]
     )
+
+    box_colors = base_colors[np.random.random_integers(0, 2, size=num_boxes)]
 
     _ = add_boxes(
         scene=scene,
-        boxes=boxes_gt,
-        box_colors_rgba_f64=gt_box_colors,
+        boxes=boxes,
+        box_colors_rgba_f64=box_colors,
         confidence_threshold=0.5,
     )
 
