@@ -48,15 +48,6 @@ $ ./bin/python3.11 -m pip install -e <path_to_blender_kitti>
 
 ```
 
-Render the bundled KITTI point cloud with some random bounding boxes (with random colors). This writes two image files to the `/tmp` folder.
-
-```
-$ blender --background --python-console
-
->>> import blender_kitti_examples
->>> blender_kitti_examples.render_kitti_bounding_boxes()
-
-
 ## Work on a scene in Blender
 
 You can import and use `blender-kitti` in the Python console inside the Blender GUI to manipulate a scene interactively.
