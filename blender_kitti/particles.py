@@ -71,7 +71,9 @@ def _create_instancer_obj(
 
     mesh = _create_instancer_mesh(positions, name_mesh)
 
-    vert_uvs = np.repeat(np.arange(0, len(mesh.vertices)), 3, axis=0)
+    # mesh has 3 vertices for every instancer position
+    assert len(mesh.vertices) % 3 == 0
+    vert_uvs = np.repeat(np.arange(0, len(mesh.vertices) // 3), 3, axis=0)
     # add zero y coordinate
     vert_uvs = np.stack((vert_uvs, np.zeros_like(vert_uvs)), axis=-1)
     mesh.uv_layers.new(name="per_vertex_dummy_uv")
