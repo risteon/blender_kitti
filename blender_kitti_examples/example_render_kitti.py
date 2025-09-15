@@ -98,6 +98,23 @@ def add_demo_voxels(scene):
     _ = add_voxels(voxels=voxels, colors=colors, scene=scene)
 
 
+def enable_device_usage_in_preferences():
+    ctx = bpy.context
+    cprefs = ctx.preferences.addons["cycles"].preferences
+
+    devices = cprefs.get_device_list("NONE")
+    if not devices:
+        raise RuntimeError("No compute devices found, not even a CPU?")
+
+    device_types = [device_desc[1] for device_desc in devices]
+    device_types = [t for t in device_types if t != "CPU"]
+    if not device_types:
+        raise RuntimeError(
+            "No accelerator device found (CUDA, OPTIX, HIP, ONEAPI, ...)"
+        )
+    cprefs.compute_device_type = device_types[0]
+
+
 def render_demo_images(
     demo_scenes: typing.List[DemoScene], output_path: pathlib.Path, use_gpu: bool
 ) -> None:
@@ -120,6 +137,7 @@ def render_demo_images(
         scene.render.film_transparent = True
         #
         if use_gpu:
+            enable_device_usage_in_preferences()
             scene.cycles.device = "GPU"
         else:
             scene.cycles.device = "CPU"
