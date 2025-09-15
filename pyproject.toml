@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "blender_kitti"
-version = "0.3.0"
+version = "0.4.0"
 authors = [{name = "Christoph Rist", email = "c.rist@posteo.de"}]
 license = {text = "MIT"}
 description = "Render large pointclouds and voxel grids in Blender."
