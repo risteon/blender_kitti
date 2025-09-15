@@ -4,24 +4,21 @@
 import bpy
 
 
-def enable_cycles_render_devices():
-    # setup render devices. Use all.
-    cycles_prefs = bpy.context.preferences.addons["cycles"].preferences
-    cycles_prefs.compute_device_type = "CUDA"
-    cycles_prefs.get_devices()
-    try:
-        # blender2.81+
-        for device_type in cycles_prefs.get_device_types(bpy.context):
-            cycles_prefs.get_devices_for_type(device_type[0])
-    except AttributeError:
-        pass
-    for device in cycles_prefs.devices:
+def enable_devices():
+    ctx = bpy.context
+    cprefs = ctx.preferences.addons["cycles"].preferences
+
+    devices = cprefs.get_device_list("NONE")
+    if not devices:
+        raise RuntimeError("No compute devices found, not even a CPU?")
+
+    device_types = [device_desc[1] for device_desc in devices]
+    device_types = [t for t in device_types if t != "CPU"]
+    if not device_types:
+        raise RuntimeError(
+            "No accelerator device found (CUDA, OPTIX, HIP, ONEAPI, ...)"
+        )
+    cprefs.compute_device_type = device_types[0]
+
+    for device in cprefs.devices:
         device.use = True
-
-
-def setup_system(enable_gpu_rendering: bool = True, scene=None):
-    if enable_gpu_rendering:
-        enable_cycles_render_devices()
-        if scene is None:
-            scene = bpy.context.scene
-        scene.cycles.device = "GPU"

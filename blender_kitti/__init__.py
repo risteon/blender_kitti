@@ -6,7 +6,7 @@ __email__ = "c.rist@posteo.de"
 from .blender_kitti import add_objects_from_data, extract_data_tasks_from_file
 from .particles import add_voxels, add_point_cloud, add_flow_mesh, add_boxes
 from .scene_setup import setup_scene, add_cameras_default
-from .system_setup import setup_system
+from .system_setup import enable_devices
 from .object_spotlight import add_spotlight_ground
 from .cli import process_file
 import numpy as np
@@ -20,10 +20,10 @@ __all__ = [
     "add_point_cloud",
     "add_spotlight_ground",
     "add_voxels",
+    "enable_devices",
     "extract_data_tasks_from_file",
     "process_file",
     "setup_scene",
-    "setup_system",
 ]
 
 

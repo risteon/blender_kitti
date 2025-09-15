@@ -14,7 +14,7 @@ from .blender_kitti import (
     make_scene,
     extract_data_tasks_from_file,
 )
-from .system_setup import setup_system
+from .system_setup import enable_devices
 from .scene_setup import add_cameras_default
 
 logger = logging.getLogger(__name__)
@@ -75,11 +75,10 @@ def make_scene_from_data_files(render_config: typing.Union[str, None], filenames
 
     add_objects_from_data(tasks, scene)
 
-    # Todo apply config
-    try:
-        setup_system(enable_gpu_rendering=True, scene=scene)
-    except ImportError:
-        pass
+    enable_gpu_rendering = True
+    if enable_gpu_rendering:
+        enable_devices()
+        scene.cycles.device = "GPU"
 
     return scene, config
 
