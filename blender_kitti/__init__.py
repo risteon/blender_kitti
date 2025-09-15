@@ -3,6 +3,7 @@
 __author__ = """Christoph Rist"""
 __email__ = "c.rist@posteo.de"
 
+from .blender_kitti import add_objects_from_data, extract_data_tasks_from_file
 from .particles import add_voxels, add_point_cloud, add_flow_mesh, add_boxes
 from .scene_setup import setup_scene, add_cameras_default
 from .system_setup import setup_system
@@ -13,14 +14,16 @@ import numpy as np
 
 __all__ = [
     "add_boxes",
-    "add_voxels",
-    "add_point_cloud",
     "add_cameras_default",
     "add_flow_mesh",
+    "add_objects_from_data",
+    "add_point_cloud",
+    "add_spotlight_ground",
+    "add_voxels",
+    "extract_data_tasks_from_file",
+    "process_file",
     "setup_scene",
     "setup_system",
-    "add_spotlight_ground",
-    "process_file",
 ]
 
 
@@ -43,5 +46,3 @@ def furthest_point_sampling_thresh(pts, dist_thresh: float = 0.1):
         farthest_pts_idxs.append(farthest_pt_idx)
         distances = np.minimum(distances, calc_distances(farthest_pts[-1], pts))
     return np.stack(farthest_pts, axis=0), np.array(farthest_pts_idxs)
-
-
