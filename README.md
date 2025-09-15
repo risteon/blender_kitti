@@ -12,6 +12,7 @@
 * Now uses the official `bpy` package published on PyPI. Both headless rendering and development are much more convenient.
 * Fixed compatibility for **Blender 4.5**
 * Switched to **uv** for project management
+* Changed texture image shape for better GPU compatibility
 
 ## About
 
@@ -31,6 +32,7 @@ By default, output images are created in `blender_kitti_examples/img/`.
 uv run blender_kitti_render_demo point_cloud
 uv run blender_kitti_render_demo voxels
 uv run blender_kitti_render_demo scene_flow
+uv run blender_kitti_render_demo boxes
 ```
 
 ## Installation into Blender's bundled Python

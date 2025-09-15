@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """"""
+
 import typing
 
 import bpy
@@ -8,7 +9,6 @@ from .colormap_turbo import turbo_colormap_data
 
 
 class NodeRGBColorSelect:
-
     COLOR_BLACK = (0.0, 0.0, 0.0, 1.0)
     VALUES = {
         "input": 0.0,
@@ -255,8 +255,6 @@ def make_nodes_simple_material(material, base_color):
 
 
 def _make_nodes_uv_mapped_material(node_tree, color_image):
-    assert color_image.size[1] == 1
-
     nodes = node_tree.nodes
     # create uv input node
     node_uv = nodes.new(type="ShaderNodeUVMap")
@@ -273,10 +271,17 @@ def _make_nodes_uv_mapped_material(node_tree, color_image):
     node_add_y.inputs[1].default_value = 0.5
     node_add_y.operation = "ADD"
     node_add_y.location = 450, -200
+
     node_div_x = nodes.new(type="ShaderNodeMath")
     node_div_x.inputs[1].default_value = float(color_image.size[0])
     node_div_x.operation = "DIVIDE"
     node_div_x.location = 520, 0
+
+    node_div_y = nodes.new(type="ShaderNodeMath")
+    node_div_y.inputs[1].default_value = float(color_image.size[1])
+    node_div_y.operation = "DIVIDE"
+    node_div_y.location = 520, -200
+
     node_comb = nodes.new(type="ShaderNodeCombineXYZ")
     node_comb.inputs[2].default_value = 0.0
     node_comb.location = 700, 0
@@ -294,15 +299,14 @@ def _make_nodes_uv_mapped_material(node_tree, color_image):
     links.new(node_sep.outputs[1], node_add_y.inputs[0])
     links.new(node_add_x.outputs[0], node_div_x.inputs[0])
     links.new(node_div_x.outputs[0], node_comb.inputs[0])
-    links.new(node_add_y.outputs[0], node_comb.inputs[1])
+    links.new(node_add_y.outputs[0], node_div_y.inputs[0])
+    links.new(node_div_y.outputs[0], node_comb.inputs[1])
     links.new(node_comb.outputs[0], node_text.inputs[0])
     # return color link
     return node_text.outputs[0]
 
 
 def make_new_nodes_material(material, color_image):
-    assert color_image.size[1] == 1
-
     material.use_nodes = True
     material.node_tree.nodes.clear()
 
@@ -327,7 +331,6 @@ def make_nodes_vertex_color_material(
     default_color,
     mode: str = "select",
 ):
-
     if mode not in ["select", "mix"]:
         raise ValueError("Unknown vertex color mode '{}'.".format(mode))
 
@@ -346,7 +349,6 @@ def make_nodes_vertex_color_material(
     selector = None
 
     if mode == "mix":
-
         # default color input node, if no vertex colors are given
         node_default_color = nodes.new(type="ShaderNodeRGB")
         node_default_color.outputs[0].default_value = default_color
@@ -354,7 +356,6 @@ def make_nodes_vertex_color_material(
         raise NotImplementedError()
 
     elif mode == "select":
-
         selector = ColorAttrSelector(
             material.node_tree,
             vertex_attr_rgb=vertex_attr_rgb,

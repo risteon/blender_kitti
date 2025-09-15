@@ -16,6 +16,10 @@ from .material_shader import (
     add_nodes_to_material,
 )
 
+# Max texture size of 8192 works on AMDs RDNA3 architecture
+MAX_TEXTURE_WIDTH_EXP = 13
+MAX_TEXTURE_WIDTH = 2**MAX_TEXTURE_WIDTH_EXP
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -73,18 +77,20 @@ def _create_instancer_obj(
 
     # mesh has 3 vertices for every instancer position
     assert len(mesh.vertices) % 3 == 0
-    vert_uvs = np.repeat(np.arange(0, len(mesh.vertices) // 3), 3, axis=0)
-    # add zero y coordinate
-    vert_uvs = np.stack((vert_uvs, np.zeros_like(vert_uvs)), axis=-1)
+
+    uv_idx = np.repeat(np.arange(0, len(mesh.vertices) // 3), 3, axis=0)
+    # distribute into a 2D-texture with MAX_TEXTURE_WIDTH
+    uv_x = uv_idx & (MAX_TEXTURE_WIDTH - 1)
+    uv_y = uv_idx >> MAX_TEXTURE_WIDTH_EXP  # Since 2^14 = 16384
+
+    uv_xy = np.stack([uv_x, uv_y], axis=-1)
+    # TODO(risteon): this can be created more efficiently with np and knowledge of the mesh struct
+    coords_flat = [
+        uv for pair in [uv_xy[loop.vertex_index] for loop in mesh.loops] for uv in pair
+    ]
+
     mesh.uv_layers.new(name="per_vertex_dummy_uv")
-    mesh.uv_layers[-1].data.foreach_set(
-        "uv",
-        [
-            uv
-            for pair in [vert_uvs[loop.vertex_index] for loop in mesh.loops]
-            for uv in pair
-        ],
-    )
+    mesh.uv_layers[-1].data.foreach_set("uv", coords_flat)
 
     obj_instancer = bpy.data.objects.new(name_instancer_obj, mesh)
     return obj_instancer
@@ -115,10 +121,14 @@ def _create_color_image(colors_rgba: np.ndarray, name: str):
 
     if name in bpy.data.images:
         raise RuntimeError("Image '{}' already exists.".format(name))
-    image = bpy.data.images.new(name, len(colors_rgba), 1, alpha=True)
 
-    colors_rgba = colors_rgba.reshape((-1))
-    image.pixels = [a for a in colors_rgba]
+    image_num_rows = (len(colors_rgba) - 1) // MAX_TEXTURE_WIDTH + 1
+    image_num_cols = min(len(colors_rgba), MAX_TEXTURE_WIDTH)
+    image = bpy.data.images.new(name, image_num_cols, image_num_rows, alpha=True)
+
+    colors_rgba = np.resize(colors_rgba, (image_num_rows * image_num_cols, 4))
+    colors_rgba_flat = colors_rgba.reshape((-1))
+    image.pixels.foreach_set(colors_rgba_flat)
     # super important. Otherwise the pixel data will just vanish from memory and be
     # lost for certain after saving + loading the file.
     image.pack()
@@ -358,6 +368,10 @@ def add_point_cloud(
     color_selector = _add_material_to_particle(
         name_prefix, colors, obj_particle, material
     )
+    # works on GPU without color:
+    # color_selector = _add_material_to_particle(
+    #     name_prefix, None, obj_particle, material
+    # )
 
     return (
         obj_point_cloud,
@@ -687,9 +701,9 @@ def add_boxes(
     assert "dims" in boxes, "need box dimensions with key 'dims' to work!"
     assert "rot" in boxes, "need box rotations (yaw angle) with key 'rot' to work!"
 
-    assert (
-        box_colors_rgba_f64 <= 1.0
-    ).all(), "this code is only tested with f64 colors <= 1.0!"
+    assert (box_colors_rgba_f64 <= 1.0).all(), (
+        "this code is only tested with f64 colors <= 1.0!"
+    )
 
     num_boxes = boxes["pos"].shape[0]
     for box_idx in range(num_boxes):
